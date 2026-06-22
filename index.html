@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HANDIT! — 日本手話を学ぼう</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ログインモーダル -->
+<div class="modal-overlay hidden" id="login-modal">
+  <div class="modal">
+    <div class="modal-title">はじめましょう</div>
+    <div class="modal-sub">名前を登録して学習を始めてください。<br>進捗はこのデバイスに保存されます。</div>
+    <label class="modal-label" for="modal-name">名前</label>
+    <input class="modal-input" type="text" id="modal-name" placeholder="例：はや"/>
+    <button class="modal-submit" id="modal-submit">登録して学習を始める</button>
+    <button class="modal-cancel" id="modal-cancel">キャンセル</button>
+    <div class="modal-note">※ 現在はこのデバイスのみに保存されます。<br>将来的にクラウド保存に対応予定です。</div>
+  </div>
+</div>
+
+<!-- ナビゲーション -->
+<nav class="topbar">
+  <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
+  <div class="topbar-nav">
+    <a href="#about"   class="topbar-link">Handitとは</a>
+    <a href="#contact" class="topbar-link">お問い合わせ</a>
+    <button class="topbar-btn" id="nav-login-btn">ログイン / 登録</button>
+  </div>
+</nav>
+
+<!-- ヒーロー -->
+<section class="hero">
+  <img src="handit_logo.png" alt="HANDIT!" class="hero-logo"/>
+  <p class="hero-tagline">カメラ1つで、日本手話をリアルタイムで練習できる学習アプリ。<br>手話をすると、AIがすぐに判定してくれます。</p>
+  <a href="learn.html" class="hero-btn">学習を始める →</a>
+</section>
+
+<hr class="divider"/>
+
+<!-- Handitとは -->
+<section class="about-section" id="about">
+  <div>
+    <div class="about-section-title">Handitとは</div>
+    <div class="about-lead">手話学習を、もっと<br>インタラクティブに。</div>
+  </div>
+  <p class="about-body">
+    Handitは、PCやスマートフォンのカメラだけで日本手話（JSL）をリアルタイムに認識・判定できる学習アプリです。
+    Duolingoのように問題に答えながら楽しく練習できます。特別な機材は一切不要です。
+  </p>
+  <div class="about-cards">
+    <div class="about-card">
+      <div class="about-card-icon">📷</div>
+      <div class="about-card-title">カメラだけでOK</div>
+      <div class="about-card-body">特別なセンサーや機材は不要。普通のWebカメラやスマホで使えます。</div>
+    </div>
+    <div class="about-card">
+      <div class="about-card-icon">⚡</div>
+      <div class="about-card-title">リアルタイム判定</div>
+      <div class="about-card-body">AIがブラウザ内で即座に手話を認識。サーバーに映像を送ることはありません。</div>
+    </div>
+    <div class="about-card">
+      <div class="about-card-icon">🎮</div>
+      <div class="about-card-title">ゲーム感覚で学習</div>
+      <div class="about-card-body">正解するたびにXPを獲得。連続学習でストリークが伸びていきます。</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- CTA -->
+<section class="cta-strip">
+  <div class="cta-strip-title">さっそく試してみよう</div>
+  <p class="cta-strip-sub">登録不要ですぐに体験できます。</p>
+  <div class="cta-strip-btns">
+    <a href="learn.html" class="btn-primary">学習を始める</a>
+    <button class="btn-outline" id="cta-login-btn">アカウントを作る</button>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- お問い合わせ -->
+<section class="about-section" id="contact">
+  <div>
+    <div class="about-section-title">お問い合わせ</div>
+    <div class="about-lead">ご意見・ご要望を<br>お待ちしています。</div>
+  </div>
+  <p class="about-body">
+    Handitはまだ開発中のプロジェクトです。バグの報告や機能のご要望など、お気軽にご連絡ください。
+  </p>
+  <!-- 将来: お問い合わせフォームをここに追加 -->
+  <p style="font-size:14px; color:var(--ink-3);">📬 coming soon...</p>
+</section>
+
+<!-- フッター -->
+<hr class="divider"/>
+<footer>
+  <img src="handit_logo.png" alt="HANDIT!" class="footer-logo"/>
+  <div class="footer-links">
+    <a href="#about"   class="footer-link">Handitとは</a>
+    <a href="#contact" class="footer-link">お問い合わせ</a>
+    <a href="learn.html" class="footer-link">学習する</a>
+  </div>
+</footer>
+
+<script>
+var user = JSON.parse(localStorage.getItem('handit_user') || 'null');
+
+function updateNavBtn() {
+  var btn = document.getElementById('nav-login-btn');
+  btn.textContent = user ? user.name + ' (' + 'ログアウト)' : 'ログイン / 登録';
+}
+updateNavBtn();
+
+function showModal() {
+  if (user) {
+    user = null; localStorage.removeItem('handit_user'); updateNavBtn(); return;
+  }
+  document.getElementById('login-modal').classList.remove('hidden');
+}
+
+document.getElementById('nav-login-btn').addEventListener('click', showModal);
+document.getElementById('cta-login-btn').addEventListener('click', showModal);
+document.getElementById('modal-cancel').addEventListener('click', function() {
+  document.getElementById('login-modal').classList.add('hidden');
+});
+document.getElementById('modal-submit').addEventListener('click', function() {
+  var name = document.getElementById('modal-name').value.trim();
+  if (!name) return;
+  user = { name: name };
+  localStorage.setItem('handit_user', JSON.stringify(user));
+  document.getElementById('login-modal').classList.add('hidden');
+  updateNavBtn();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>学習する — HANDIT!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ローディング -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">モデルを読み込み中...</div>
+</div>
+
+<!-- ナビ -->
+<nav class="topbar">
+  <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
+  <div class="topbar-nav">
+    <a href="index.html" class="topbar-link">← ホーム</a>
+  </div>
+</nav>
+
+<!-- ===== 学習ホーム ===== -->
+<div id="view-home">
+  <div class="learn-layout">
+
+    <!-- ユーザーバー -->
+    <div class="user-bar">
+      <div class="user-bar-avatar">🤟</div>
+      <div class="user-bar-info">
+        <div class="user-bar-name" id="user-name">ゲスト</div>
+        <div class="user-bar-sub"  id="user-sub">JSL学習中</div>
+      </div>
+      <div class="user-bar-stats">
+        <div class="user-bar-stat">
+          <div class="user-bar-stat-num" id="stat-streak">0</div>
+          <div class="user-bar-stat-label">🔥 連続</div>
+        </div>
+        <div class="user-bar-stat">
+          <div class="user-bar-stat-num" id="stat-xp">0</div>
+          <div class="user-bar-stat-label">⭐ XP</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- モード選択 -->
+    <div>
+      <div class="mode-section-title" style="margin-bottom:12px;">モードを選ぶ</div>
+      <div class="mode-grid">
+        <div class="mode-card" id="btn-lesson-mode">
+          <div class="mode-card-icon">📚</div>
+          <div class="mode-card-title">学習モード</div>
+          <div class="mode-card-sub">問題に答えながら手話を練習</div>
+        </div>
+        <div class="mode-card" id="btn-free-mode">
+          <div class="mode-card-icon">🤲</div>
+          <div class="mode-card-title">自由手話</div>
+          <div class="mode-card-sub">手話を文章として並べていく</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- レッスン一覧 -->
+    <!-- 単語を追加するときはここのLESSONS配列を編集する -->
+    <div>
+      <div class="lesson-section-title" style="margin-bottom:12px;">レッスンを選ぶ</div>
+      <div class="lesson-list" id="lesson-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== レッスン画面 ===== -->
+<div class="lesson-screen" id="view-lesson">
+  <div class="ls-header">
+    <button class="ls-back" id="back-lesson">✕</button>
+    <div class="ls-progress-wrap">
+      <div class="ls-progress-bar" id="ls-progress" style="width:0%"></div>
+    </div>
+  </div>
+  <div class="ls-body">
+    <div class="ls-prompt">
+      <div class="ls-prompt-label">この手話をやってみよう</div>
+      <div class="ls-prompt-word" id="challenge-word">—</div>
+    </div>
+    <div class="camera-wrap">
+      <video id="video-lesson" autoplay playsinline muted></video>
+      <canvas id="canvas-lesson"></canvas>
+    </div>
+    <div class="hold-track"><div class="hold-fill" id="hold-fill"></div></div>
+    <div class="detect-bar">
+      <div class="detect-dot" id="lesson-dot"></div>
+      <div class="detect-label" id="lesson-label">手をカメラに向けてください</div>
+      <div class="detect-conf"  id="lesson-conf"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 自由手話画面 ===== -->
+<div class="free-screen" id="view-free">
+  <div class="free-header">
+    <button class="ls-back" id="back-free">✕</button>
+    <div class="free-title">🤲 自由手話モード</div>
+  </div>
+  <div class="free-body">
+    <div class="sentence-box" id="sentence-box">
+      <span class="sentence-empty">手話をすると単語が並びます</span>
+    </div>
+    <button class="clear-btn" id="btn-clear">🗑 クリア</button>
+    <div class="camera-wrap">
+      <video id="video-free" autoplay playsinline muted></video>
+      <canvas id="canvas-free"></canvas>
+    </div>
+    <div class="detect-bar">
+      <div class="detect-dot" id="free-dot"></div>
+      <div class="detect-label" id="free-label">手をカメラに向けてください</div>
+      <div class="detect-conf"  id="free-conf"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 完了画面 ===== -->
+<div class="complete-screen" id="view-complete">
+  <div class="complete-emoji">🎉</div>
+  <div class="complete-title">レッスン完了！</div>
+  <div class="complete-sub" id="complete-sub"></div>
+  <div class="complete-stats">
+    <div class="complete-stat">
+      <div class="complete-stat-num" id="c-correct">0</div>
+      <div class="complete-stat-label">正解</div>
+    </div>
+    <div class="complete-stat">
+      <div class="complete-stat-num" id="c-xp">+0</div>
+      <div class="complete-stat-label">XP獲得</div>
+    </div>
+    <div class="complete-stat">
+      <div class="complete-stat-num" id="c-streak">0</div>
+      <div class="complete-stat-label">🔥 連続</div>
+    </div>
+  </div>
+  <a href="#" class="complete-home-btn" id="complete-home-btn">ホームに戻る</a>
+</div>
+
+<!-- フィードバック -->
+<div class="feedback-overlay" id="feedback">
+  <div class="feedback-title" id="fb-title"></div>
+  <div class="feedback-sub"   id="fb-sub"></div>
+  <button class="feedback-btn" id="fb-btn">つぎへ</button>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
