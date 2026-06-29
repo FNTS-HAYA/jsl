@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>自由手話モード — HANDIT!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">読み込み中...</div>
+</div>
+
+<nav class="topbar">
+  <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
+  <div class="topbar-nav">
+    <a href="index.html" class="topbar-link">← ホーム</a>
+  </div>
+</nav>
+
+<div class="free-screen active" id="view-free">
+  <div class="free-header">
+    <div class="free-title">🤲 自由手話モード</div>
+  </div>
+  <div class="free-body">
+    <div class="sentence-box" id="sentence-box">
+      <span class="sentence-empty">手話をすると単語が並びます</span>
+    </div>
+    <button class="clear-btn" id="btn-clear">🗑 クリア</button>
+    <div class="camera-wrap">
+      <video id="video-free" autoplay playsinline muted></video>
+      <canvas id="canvas-free"></canvas>
+    </div>
+    <div class="detect-bar">
+      <div class="detect-dot" id="free-dot"></div>
+      <div class="detect-label" id="free-label">手話を始めてください</div>
+      <div class="detect-conf"  id="free-conf"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

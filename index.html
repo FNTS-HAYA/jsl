@@ -3,141 +3,259 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HANDIT! — 日本手話を学ぼう</title>
+  <title>HANDIT!</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
+  <style>
+    .home-wrap {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 24px; gap: 32px;
+    }
+    .home-logo { width: min(280px, 70vw); }
+    .home-modes { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; }
+    .home-mode-btn {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius); padding: 20px 22px;
+      cursor: pointer; box-shadow: var(--shadow);
+      transition: transform 0.15s, box-shadow 0.15s;
+      text-decoration: none; color: inherit;
+    }
+    .home-mode-btn:hover  { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .home-mode-btn:active { transform: translateY(0); }
+    .home-mode-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .home-mode-info { flex: 1; text-align: left; }
+    .home-mode-title { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+    .home-mode-sub   { font-size: 12px; color: var(--ink-3); }
+    .home-mode-arrow { font-size: 18px; color: var(--ink-3); }
+
+    .home-auth { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 380px; }
+
+    /* ユーザーバー */
+    .home-user-bar {
+      width: 100%; background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius); padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow);
+    }
+    .home-user-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--accent-l); display: flex; align-items: center;
+      justify-content: center; font-size: 18px; flex-shrink: 0; overflow: hidden;
+    }
+    .home-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .home-user-info { flex: 1; }
+    .home-user-name { font-size: 14px; font-weight: 700; }
+    .home-user-stats { display: flex; gap: 12px; margin-top: 2px; }
+    .home-user-stat  { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+    .home-logout-btn {
+      font-size: 12px; font-weight: 600; color: var(--ink-3);
+      background: none; border: 1.5px solid var(--line);
+      border-radius: 99px; padding: 5px 12px; cursor: pointer;
+    }
+
+    /* ログインボタン */
+    .home-login-btns { display: flex; gap: 10px; width: 100%; }
+    .btn-google {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm); padding: 12px;
+      font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-google:hover { background: var(--bg); }
+    .btn-email {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--ink); color: white; border: none;
+      border-radius: var(--radius-sm); padding: 12px;
+      font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-email:hover { opacity: 0.85; }
+  </style>
 </head>
 <body>
 
-<!-- ログインモーダル -->
-<div class="modal-overlay hidden" id="login-modal">
+<!-- メール認証モーダル -->
+<div class="modal-overlay hidden" id="email-modal">
   <div class="modal">
-    <div class="modal-title">はじめましょう</div>
-    <div class="modal-sub">名前を登録して学習を始めてください。<br>進捗はこのデバイスに保存されます。</div>
-    <label class="modal-label" for="modal-name">名前</label>
-    <input class="modal-input" type="text" id="modal-name" placeholder="例：はや"/>
-    <button class="modal-submit" id="modal-submit">登録して学習を始める</button>
-    <button class="modal-cancel" id="modal-cancel">キャンセル</button>
-    <div class="modal-note">※ 現在はこのデバイスのみに保存されます。<br>将来的にクラウド保存に対応予定です。</div>
+    <div class="modal-title" id="email-modal-title">ログイン</div>
+    <div class="modal-sub"   id="email-modal-sub">メールアドレスとパスワードを入力してください</div>
+    <label class="modal-label">メールアドレス</label>
+    <input class="modal-input" type="email"    id="modal-email"    placeholder="example@email.com"/>
+    <label class="modal-label">パスワード</label>
+    <input class="modal-input" type="password" id="modal-password" placeholder="6文字以上"/>
+    <div id="modal-error" style="color:#FF3B30;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <button class="modal-submit" id="email-modal-submit">ログイン</button>
+    <button class="modal-cancel" id="email-modal-toggle" style="margin-bottom:8px;">新規登録はこちら</button>
+    <button class="modal-cancel" id="email-modal-cancel">キャンセル</button>
   </div>
 </div>
 
-<!-- ナビゲーション -->
-<nav class="topbar">
-  <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
-  <div class="topbar-nav">
-    <a href="#about"   class="topbar-link">Handitとは</a>
-    <a href="#contact" class="topbar-link">お問い合わせ</a>
-    <button class="topbar-btn" id="nav-login-btn">ログイン / 登録</button>
+<!-- ホーム -->
+<div class="home-wrap">
+  <img src="handit_logo.png" alt="HANDIT!" class="home-logo"/>
+
+  <div class="home-modes">
+    <a href="learn.html" class="home-mode-btn">
+      <div class="home-mode-icon" style="background:#E6FAF2;">📚</div>
+      <div class="home-mode-info">
+        <div class="home-mode-title">学習モード</div>
+        <div class="home-mode-sub">レベルをクリアしながら手話を学ぶ</div>
+      </div>
+      <div class="home-mode-arrow">›</div>
+    </a>
+    <a href="free.html" class="home-mode-btn">
+      <div class="home-mode-icon" style="background:#D0F0FD;">🤲</div>
+      <div class="home-mode-info">
+        <div class="home-mode-title">自由手話モード</div>
+        <div class="home-mode-sub">手話をすると文章になっていく</div>
+      </div>
+      <div class="home-mode-arrow">›</div>
+    </a>
   </div>
-</nav>
 
-<!-- ヒーロー -->
-<section class="hero">
-  <img src="handit_logo.png" alt="HANDIT!" class="hero-logo"/>
-  <p class="hero-tagline">カメラ1つで、日本手話をリアルタイムで練習できる学習アプリ。<br>手話をすると、AIがすぐに判定してくれます。</p>
-  <a href="learn.html" class="hero-btn">学習を始める →</a>
-</section>
-
-<hr class="divider"/>
-
-<!-- Handitとは -->
-<section class="about-section" id="about">
-  <div>
-    <div class="about-section-title">Handitとは</div>
-    <div class="about-lead">手話学習を、もっと<br>インタラクティブに。</div>
-  </div>
-  <p class="about-body">
-    Handitは、PCやスマートフォンのカメラだけで日本手話（JSL）をリアルタイムに認識・判定できる学習アプリです。
-    Duolingoのように問題に答えながら楽しく練習できます。特別な機材は一切不要です。
-  </p>
-  <div class="about-cards">
-    <div class="about-card">
-      <div class="about-card-icon">📷</div>
-      <div class="about-card-title">カメラだけでOK</div>
-      <div class="about-card-body">特別なセンサーや機材は不要。普通のWebカメラやスマホで使えます。</div>
+  <div class="home-auth">
+    <!-- ログイン済み -->
+    <div class="home-user-bar hidden" id="user-bar">
+      <div class="home-user-avatar" id="user-avatar">🤟</div>
+      <div class="home-user-info">
+        <div class="home-user-name" id="user-display-name">ユーザー</div>
+        <div class="home-user-stats">
+          <span class="home-user-stat">🔥 <span id="user-streak">0</span> 連続</span>
+          <span class="home-user-stat">⭐ <span id="user-xp">0</span> XP</span>
+        </div>
+      </div>
+      <button class="home-logout-btn" id="logout-btn">ログアウト</button>
     </div>
-    <div class="about-card">
-      <div class="about-card-icon">⚡</div>
-      <div class="about-card-title">リアルタイム判定</div>
-      <div class="about-card-body">AIがブラウザ内で即座に手話を認識。サーバーに映像を送ることはありません。</div>
-    </div>
-    <div class="about-card">
-      <div class="about-card-icon">🎮</div>
-      <div class="about-card-title">ゲーム感覚で学習</div>
-      <div class="about-card-body">正解するたびにXPを獲得。連続学習でストリークが伸びていきます。</div>
+    <!-- 未ログイン -->
+    <div class="home-login-btns" id="login-btns">
+      <button class="btn-google" id="google-login-btn">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Googleでログイン
+      </button>
+      <button class="btn-email" id="email-login-btn">✉️ メールで登録</button>
     </div>
   </div>
-</section>
+</div>
 
-<hr class="divider"/>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-<!-- CTA -->
-<section class="cta-strip">
-  <div class="cta-strip-title">さっそく試してみよう</div>
-  <p class="cta-strip-sub">登録不要ですぐに体験できます。</p>
-  <div class="cta-strip-btns">
-    <a href="learn.html" class="btn-primary">学習を始める</a>
-    <button class="btn-outline" id="cta-login-btn">アカウントを作る</button>
-  </div>
-</section>
+const firebaseConfig = {
+  apiKey: "AIzaSyB-YZ16629_Eadt8mu2kxtZU5ehZ9-dsGA",
+  authDomain: "handit-a5cfa.firebaseapp.com",
+  projectId: "handit-a5cfa",
+  storageBucket: "handit-a5cfa.firebasestorage.app",
+  messagingSenderId: "398275846471",
+  appId: "1:398275846471:web:eb7571dcd1e920964d2c62"
+};
 
-<hr class="divider"/>
+const app      = initializeApp(firebaseConfig);
+const auth     = getAuth(app);
+const db       = getFirestore(app);
+const provider = new GoogleAuthProvider();
+let isRegisterMode = false;
 
-<!-- お問い合わせ -->
-<section class="about-section" id="contact">
-  <div>
-    <div class="about-section-title">お問い合わせ</div>
-    <div class="about-lead">ご意見・ご要望を<br>お待ちしています。</div>
-  </div>
-  <p class="about-body">
-    Handitはまだ開発中のプロジェクトです。バグの報告や機能のご要望など、お気軽にご連絡ください。
-  </p>
-  <!-- 将来: お問い合わせフォームをここに追加 -->
-  <p style="font-size:14px; color:var(--ink-3);">📬 coming soon...</p>
-</section>
-
-<!-- フッター -->
-<hr class="divider"/>
-<footer>
-  <img src="handit_logo.png" alt="HANDIT!" class="footer-logo"/>
-  <div class="footer-links">
-    <a href="#about"   class="footer-link">Handitとは</a>
-    <a href="#contact" class="footer-link">お問い合わせ</a>
-    <a href="learn.html" class="footer-link">学習する</a>
-  </div>
-</footer>
-
-<script>
-var user = JSON.parse(localStorage.getItem('handit_user') || 'null');
-
-function updateNavBtn() {
-  var btn = document.getElementById('nav-login-btn');
-  btn.textContent = user ? user.name + ' (' + 'ログアウト)' : 'ログイン / 登録';
-}
-updateNavBtn();
-
-function showModal() {
-  if (user) {
-    user = null; localStorage.removeItem('handit_user'); updateNavBtn(); return;
+// ユーザーデータをFirestoreから取得・初期化
+async function loadUserData(uid) {
+  const ref  = doc(db, 'users', uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    return snap.data();
+  } else {
+    const defaultData = { xp:0, streak:0, cleared:[], createdAt: serverTimestamp() };
+    await setDoc(ref, defaultData);
+    return defaultData;
   }
-  document.getElementById('login-modal').classList.remove('hidden');
 }
 
-document.getElementById('nav-login-btn').addEventListener('click', showModal);
-document.getElementById('cta-login-btn').addEventListener('click', showModal);
-document.getElementById('modal-cancel').addEventListener('click', function() {
-  document.getElementById('login-modal').classList.add('hidden');
+// 認証状態の監視
+onAuthStateChanged(auth, async user => {
+  const userBar   = document.getElementById('user-bar');
+  const loginBtns = document.getElementById('login-btns');
+  if (user) {
+    userBar.classList.remove('hidden');
+    loginBtns.classList.add('hidden');
+    document.getElementById('user-display-name').textContent = user.displayName || user.email;
+    const avatar = document.getElementById('user-avatar');
+    if (user.photoURL) {
+      avatar.innerHTML = `<img src="${user.photoURL}" alt="avatar"/>`;
+    } else {
+      avatar.textContent = '🤟';
+    }
+    // Firestoreからデータ取得してUIに反映
+    try {
+      const data = await loadUserData(user.uid);
+      document.getElementById('user-xp').textContent     = data.xp     || 0;
+      document.getElementById('user-streak').textContent = data.streak  || 0;
+      // learn.htmlで使えるようlocalStorageにも同期
+      localStorage.setItem('handit_xp',      data.xp      || 0);
+      localStorage.setItem('handit_streak',  data.streak  || 0);
+      localStorage.setItem('handit_cleared', JSON.stringify(data.cleared || []));
+      localStorage.setItem('handit_uid',     user.uid);
+    } catch(e) { console.error('Firestore読み込みエラー:', e); }
+  } else {
+    userBar.classList.add('hidden');
+    loginBtns.classList.remove('hidden');
+    localStorage.removeItem('handit_uid');
+  }
 });
-document.getElementById('modal-submit').addEventListener('click', function() {
-  var name = document.getElementById('modal-name').value.trim();
-  if (!name) return;
-  user = { name: name };
-  localStorage.setItem('handit_user', JSON.stringify(user));
-  document.getElementById('login-modal').classList.add('hidden');
-  updateNavBtn();
+
+// Googleログイン
+document.getElementById('google-login-btn').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); }
 });
+
+// メールモーダル
+document.getElementById('email-login-btn').addEventListener('click', () => {
+  isRegisterMode = false; updateEmailModal();
+  document.getElementById('email-modal').classList.remove('hidden');
+});
+document.getElementById('email-modal-cancel').addEventListener('click', () => {
+  document.getElementById('email-modal').classList.add('hidden'); clearError();
+});
+document.getElementById('email-modal-toggle').addEventListener('click', () => {
+  isRegisterMode = !isRegisterMode; updateEmailModal();
+});
+
+function updateEmailModal() {
+  document.getElementById('email-modal-title').textContent  = isRegisterMode ? '新規登録' : 'ログイン';
+  document.getElementById('email-modal-sub').textContent    = isRegisterMode ? 'メールアドレスとパスワードを登録してください' : 'メールアドレスとパスワードを入力してください';
+  document.getElementById('email-modal-submit').textContent = isRegisterMode ? '登録する' : 'ログイン';
+  document.getElementById('email-modal-toggle').textContent = isRegisterMode ? 'すでにアカウントをお持ちの方' : '新規登録はこちら';
+  clearError();
+}
+function clearError() { const e=document.getElementById('modal-error'); e.style.display='none'; e.textContent=''; }
+function showError(msg){ const e=document.getElementById('modal-error'); e.textContent=msg; e.style.display='block'; }
+
+document.getElementById('email-modal-submit').addEventListener('click', async () => {
+  const email    = document.getElementById('modal-email').value.trim();
+  const password = document.getElementById('modal-password').value;
+  if (!email||!password) { showError('メールとパスワードを入力してください'); return; }
+  try {
+    if (isRegisterMode) {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } else {
+      await signInWithEmailAndPassword(auth, email, password);
+    }
+    document.getElementById('email-modal').classList.add('hidden'); clearError();
+  } catch(e) {
+    const msgs = {
+      'auth/email-already-in-use': 'このメールアドレスはすでに登録されています',
+      'auth/invalid-email':        'メールアドレスの形式が正しくありません',
+      'auth/weak-password':        'パスワードは6文字以上にしてください',
+      'auth/user-not-found':       'アカウントが見つかりません',
+      'auth/wrong-password':       'パスワードが間違っています',
+      'auth/invalid-credential':   'メールアドレスまたはパスワードが間違っています',
+    };
+    showError(msgs[e.code] || 'エラーが発生しました');
+  }
+});
+
+// ログアウト
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 </script>
 </body>
 </html>

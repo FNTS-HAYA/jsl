@@ -3,17 +3,58 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>学習する — HANDIT!</title>
+  <title>学習モード — HANDIT!</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* レベル選択画面 */
+    .level-wrap {
+      max-width: 520px; margin: 0 auto;
+      padding: 24px 20px 60px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .level-header {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .level-page-title { font-size: 22px; font-weight: 800; flex: 1; }
+
+    .level-list { display: flex; flex-direction: column; gap: 12px; }
+    .level-card {
+      background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius); padding: 20px 22px;
+      display: flex; align-items: center; gap: 16px;
+      box-shadow: var(--shadow);
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+    }
+    .level-card:hover  { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .level-card:active { transform: translateY(0); }
+    .level-card.locked { opacity: 0.5; cursor: not-allowed; }
+    .level-card.locked:hover { transform: none; box-shadow: var(--shadow); }
+
+    .level-num {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 900; flex-shrink: 0;
+      font-family: -apple-system, sans-serif;
+    }
+    .level-info { flex: 1; }
+    .level-title { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
+    .level-words { font-size: 12px; color: var(--ink-3); }
+    .level-status { font-size: 22px; }
+
+    .level-card.cleared .level-num { background: var(--accent-l); color: var(--accent-d); }
+    .level-card.available .level-num { background: #E8F1FC; color: var(--blue); }
+    .level-card.locked .level-num { background: var(--line); color: var(--ink-3); }
+  </style>
 </head>
 <body>
 
 <!-- ローディング -->
 <div class="loading-overlay" id="loading">
   <div class="loading-spinner"></div>
-  <div class="loading-text" id="loading-text">モデルを読み込み中...</div>
+  <div class="loading-text" id="loading-text">読み込み中...</div>
 </div>
 
 <!-- ナビ -->
@@ -24,53 +65,13 @@
   </div>
 </nav>
 
-<!-- ===== 学習ホーム ===== -->
-<div id="view-home">
-  <div class="learn-layout">
-
-    <!-- ユーザーバー -->
-    <div class="user-bar">
-      <div class="user-bar-avatar">🤟</div>
-      <div class="user-bar-info">
-        <div class="user-bar-name" id="user-name">ゲスト</div>
-        <div class="user-bar-sub"  id="user-sub">JSL学習中</div>
-      </div>
-      <div class="user-bar-stats">
-        <div class="user-bar-stat">
-          <div class="user-bar-stat-num" id="stat-streak">0</div>
-          <div class="user-bar-stat-label">🔥 連続</div>
-        </div>
-        <div class="user-bar-stat">
-          <div class="user-bar-stat-num" id="stat-xp">0</div>
-          <div class="user-bar-stat-label">⭐ XP</div>
-        </div>
-      </div>
+<!-- ===== レベル選択 ===== -->
+<div id="view-levels">
+  <div class="level-wrap">
+    <div class="level-header">
+      <div class="level-page-title">📚 学習モード</div>
     </div>
-
-    <!-- モード選択 -->
-    <div>
-      <div class="mode-section-title" style="margin-bottom:12px;">モードを選ぶ</div>
-      <div class="mode-grid">
-        <div class="mode-card" id="btn-lesson-mode">
-          <div class="mode-card-icon">📚</div>
-          <div class="mode-card-title">学習モード</div>
-          <div class="mode-card-sub">問題に答えながら手話を練習</div>
-        </div>
-        <div class="mode-card" id="btn-free-mode">
-          <div class="mode-card-icon">🤲</div>
-          <div class="mode-card-title">自由手話</div>
-          <div class="mode-card-sub">手話を文章として並べていく</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- レッスン一覧 -->
-    <!-- 単語を追加するときはここのLESSONS配列を編集する -->
-    <div>
-      <div class="lesson-section-title" style="margin-bottom:12px;">レッスンを選ぶ</div>
-      <div class="lesson-list" id="lesson-list"></div>
-    </div>
-
+    <div class="level-list" id="level-list"></div>
   </div>
 </div>
 
@@ -94,31 +95,8 @@
     <div class="hold-track"><div class="hold-fill" id="hold-fill"></div></div>
     <div class="detect-bar">
       <div class="detect-dot" id="lesson-dot"></div>
-      <div class="detect-label" id="lesson-label">手をカメラに向けてください</div>
+      <div class="detect-label" id="lesson-label">手話を始めてください</div>
       <div class="detect-conf"  id="lesson-conf"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 自由手話画面 ===== -->
-<div class="free-screen" id="view-free">
-  <div class="free-header">
-    <button class="ls-back" id="back-free">✕</button>
-    <div class="free-title">🤲 自由手話モード</div>
-  </div>
-  <div class="free-body">
-    <div class="sentence-box" id="sentence-box">
-      <span class="sentence-empty">手話をすると単語が並びます</span>
-    </div>
-    <button class="clear-btn" id="btn-clear">🗑 クリア</button>
-    <div class="camera-wrap">
-      <video id="video-free" autoplay playsinline muted></video>
-      <canvas id="canvas-free"></canvas>
-    </div>
-    <div class="detect-bar">
-      <div class="detect-dot" id="free-dot"></div>
-      <div class="detect-label" id="free-label">手をカメラに向けてください</div>
-      <div class="detect-conf"  id="free-conf"></div>
     </div>
   </div>
 </div>
@@ -126,7 +104,7 @@
 <!-- ===== 完了画面 ===== -->
 <div class="complete-screen" id="view-complete">
   <div class="complete-emoji">🎉</div>
-  <div class="complete-title">レッスン完了！</div>
+  <div class="complete-title">レベルクリア！</div>
   <div class="complete-sub" id="complete-sub"></div>
   <div class="complete-stats">
     <div class="complete-stat">
@@ -137,12 +115,8 @@
       <div class="complete-stat-num" id="c-xp">+0</div>
       <div class="complete-stat-label">XP獲得</div>
     </div>
-    <div class="complete-stat">
-      <div class="complete-stat-num" id="c-streak">0</div>
-      <div class="complete-stat-label">🔥 連続</div>
-    </div>
   </div>
-  <a href="#" class="complete-home-btn" id="complete-home-btn">ホームに戻る</a>
+  <a href="#" class="complete-home-btn" id="complete-back-btn">レベル選択に戻る</a>
 </div>
 
 <!-- フィードバック -->
@@ -152,7 +126,6 @@
   <button class="feedback-btn" id="fb-btn">つぎへ</button>
 </div>
 
-<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>

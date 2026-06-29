@@ -1,10 +1,16 @@
 """
-Handit LSTMトレーニングスクリプト v2
-======================================
-168次元（手 + 顔）の入力に対応。
+Handit トレーニングスクリプト v3 — Transformer版
+==================================================
+preprocess.py の出力（168次元）をそのまま使えます。
+collect_motion.html や preprocess.py の変更は不要。
+
+LSTMからTransformerに変更した点：
+- 全フレームを一度に見てどのフレームが重要か学習（Attention）
+- 動きの「どこが特徴的か」を自動で見つけられる
 """
 
 import json
+import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -13,10 +19,15 @@ from torch.utils.data import Dataset, DataLoader, random_split
 DATASET_DIR   = "dataset"
 EPOCHS        = 150
 BATCH_SIZE    = 16
-LEARNING_RATE = 0.001
-HIDDEN_SIZE   = 256
-NUM_LAYERS    = 3
+LEARNING_RATE = 0.0005
 VAL_SPLIT     = 0.2
+
+# Transformer設定
+D_MODEL    = 128   # 埋め込み次元
+NHEAD      = 4     # Attentionのヘッド数
+NUM_LAYERS = 3     # Transformerの層数
+DIM_FF     = 256   # フィードフォワード層のサイズ
+DROPOUT    = 0.2
 
 
 class SignDataset(Dataset):
@@ -27,26 +38,52 @@ class SignDataset(Dataset):
     def __getitem__(self, idx): return self.X[idx], self.y[idx]
 
 
-class HanditLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes):
+class PositionalEncoding(nn.Module):
+    """フレームの順番情報をモデルに教える"""
+    def __init__(self, d_model, max_len=128, dropout=0.1):
         super().__init__()
-        self.lstm = nn.LSTM(
-            input_size=input_size, hidden_size=hidden_size,
-            num_layers=num_layers, batch_first=True, dropout=0.3
+        self.dropout = nn.Dropout(dropout)
+        pe = torch.zeros(max_len, d_model)
+        pos = torch.arange(0, max_len).unsqueeze(1).float()
+        div = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(pos * div)
+        pe[:, 1::2] = torch.cos(pos * div)
+        self.register_buffer('pe', pe.unsqueeze(0))  # (1, max_len, d_model)
+
+    def forward(self, x):
+        return self.dropout(x + self.pe[:, :x.size(1)])
+
+
+class HanditTransformer(nn.Module):
+    def __init__(self, input_size, num_classes, d_model=D_MODEL, nhead=NHEAD, num_layers=NUM_LAYERS, dim_ff=DIM_FF, dropout=DROPOUT):
+        super().__init__()
+        # 入力を d_model 次元に投影
+        self.input_proj = nn.Linear(input_size, d_model)
+        self.pos_enc    = PositionalEncoding(d_model, dropout=dropout)
+
+        # Transformer Encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model, nhead=nhead,
+            dim_feedforward=dim_ff, dropout=dropout,
+            batch_first=True
         )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+
+        # 分類ヘッド
         self.classifier = nn.Sequential(
-            nn.Linear(hidden_size, 128),
+            nn.Linear(d_model, 64),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(dropout),
             nn.Linear(64, num_classes)
         )
 
     def forward(self, x):
-        out, _ = self.lstm(x)
-        return self.classifier(out[:, -1, :])
+        # x: (batch, frames, features)
+        x = self.input_proj(x)      # → (batch, frames, d_model)
+        x = self.pos_enc(x)         # フレーム順番を付加
+        x = self.transformer(x)     # → (batch, frames, d_model)
+        x = x.mean(dim=1)           # 全フレームを平均（CLSトークンの代わり）
+        return self.classifier(x)
 
 
 def main():
@@ -64,6 +101,7 @@ def main():
     print(f"  フレーム数: {X.shape[1]}")
     print(f"  特徴量次元: {input_size}")
     print(f"  クラス数:   {num_classes}  {labels}")
+    print(f"  モデル:     Transformer (d_model={D_MODEL}, heads={NHEAD}, layers={NUM_LAYERS})")
 
     dataset    = SignDataset(X, y)
     val_size   = int(len(dataset) * VAL_SPLIT)
@@ -77,10 +115,10 @@ def main():
     device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"デバイス: {device}\n")
 
-    model     = HanditLSTM(input_size, HIDDEN_SIZE, NUM_LAYERS, num_classes).to(device)
+    model     = HanditTransformer(input_size, num_classes).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=15, factor=0.5)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=0.01)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
     best_val_acc = 0.0
 
@@ -93,13 +131,14 @@ def main():
             logits = model(X_batch)
             loss   = criterion(logits, y_batch)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             train_correct += (logits.argmax(1) == y_batch).sum().item()
-
+        scheduler.step()
         train_acc = train_correct / train_size
 
         model.eval()
-        val_correct = 0
+        val_correct    = 0
         val_loss_total = 0.0
         with torch.no_grad():
             for X_batch, y_batch in val_loader:
@@ -109,17 +148,19 @@ def main():
                 val_correct    += (logits.argmax(1) == y_batch).sum().item()
 
         val_acc = val_correct / val_size
-        scheduler.step(val_loss_total)
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             torch.save({
                 "model_state": model.state_dict(),
                 "input_size":  input_size,
-                "hidden_size": HIDDEN_SIZE,
-                "num_layers":  NUM_LAYERS,
                 "num_classes": num_classes,
                 "labels":      labels,
+                "model_type":  "transformer",
+                "d_model":     D_MODEL,
+                "nhead":       NHEAD,
+                "num_layers":  NUM_LAYERS,
+                "dim_ff":      DIM_FF,
             }, f"{DATASET_DIR}/model.pth")
 
         if epoch % 10 == 0 or epoch == 1:
