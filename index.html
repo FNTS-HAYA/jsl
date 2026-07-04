@@ -3,259 +3,363 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HANDIT!</title>
+  <title>HANDIT! — 日本手話学習アプリ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
-    .home-wrap {
-      min-height: 100vh; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 40px 24px; gap: 32px;
-    }
-    .home-logo { width: min(280px, 70vw); }
-    .home-modes { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; }
-    .home-mode-btn {
-      display: flex; align-items: center; gap: 16px;
-      background: var(--white); border: 1.5px solid var(--line);
-      border-radius: var(--radius); padding: 20px 22px;
-      cursor: pointer; box-shadow: var(--shadow);
-      transition: transform 0.15s, box-shadow 0.15s;
-      text-decoration: none; color: inherit;
-    }
-    .home-mode-btn:hover  { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-    .home-mode-btn:active { transform: translateY(0); }
-    .home-mode-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
-    .home-mode-info { flex: 1; text-align: left; }
-    .home-mode-title { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
-    .home-mode-sub   { font-size: 12px; color: var(--ink-3); }
-    .home-mode-arrow { font-size: 18px; color: var(--ink-3); }
-
-    .home-auth { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 380px; }
-
-    /* ユーザーバー */
-    .home-user-bar {
-      width: 100%; background: var(--white); border: 1.5px solid var(--line);
-      border-radius: var(--radius); padding: 14px 18px;
-      display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow);
-    }
-    .home-user-avatar {
-      width: 40px; height: 40px; border-radius: 50%;
-      background: var(--accent-l); display: flex; align-items: center;
-      justify-content: center; font-size: 18px; flex-shrink: 0; overflow: hidden;
-    }
-    .home-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .home-user-info { flex: 1; }
-    .home-user-name { font-size: 14px; font-weight: 700; }
-    .home-user-stats { display: flex; gap: 12px; margin-top: 2px; }
-    .home-user-stat  { font-size: 12px; color: var(--ink-3); font-weight: 600; }
-    .home-logout-btn {
-      font-size: 12px; font-weight: 600; color: var(--ink-3);
-      background: none; border: 1.5px solid var(--line);
-      border-radius: 99px; padding: 5px 12px; cursor: pointer;
+    :root {
+      --yellow: #FFD60A;
+      --yellow-d: #C8A800;
+      --ink: #0F0F0F;
+      --ink-2: #3C3C3C;
+      --ink-3: #8A8A8A;
+      --line: #E8E8E8;
+      --bg: #FFFFFF;
+      --green: #00C46A;
+      --radius: 20px;
     }
 
-    /* ログインボタン */
-    .home-login-btns { display: flex; gap: 10px; width: 100%; }
-    .btn-google {
-      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-      background: var(--white); border: 1.5px solid var(--line);
-      border-radius: var(--radius-sm); padding: 12px;
-      font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Sans JP', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
-    .btn-google:hover { background: var(--bg); }
-    .btn-email {
-      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+
+    /* ===== NAV ===== */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 52px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      transition: background 0.3s;
+    }
+    .nav-logo { height: 24px; }
+    .nav-btn {
       background: var(--ink); color: white; border: none;
-      border-radius: var(--radius-sm); padding: 12px;
-      font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s;
+      border-radius: 99px; padding: 8px 18px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.15s;
     }
-    .btn-email:hover { opacity: 0.85; }
+    .nav-btn:hover { opacity: 0.8; }
+
+    /* ===== SECTIONS ===== */
+    section {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 100px 24px 80px;
+      text-align: center;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      background: #FAFAFA;
+      position: relative; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,214,10,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--ink-3);
+      margin-bottom: 20px;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.8s ease 0.2s forwards;
+    }
+    .hero-logo {
+      width: min(320px, 72vw);
+      opacity: 0; transform: translateY(30px);
+      animation: fadeUp 0.8s ease 0.4s forwards;
+    }
+    .hero-tagline {
+      margin-top: 24px;
+      font-size: clamp(16px, 3vw, 22px);
+      font-weight: 500; color: var(--ink-2); line-height: 1.7;
+      max-width: 480px;
+      opacity: 0; transform: translateY(30px);
+      animation: fadeUp 0.8s ease 0.6s forwards;
+    }
+    .hero-cta-wrap {
+      margin-top: 36px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+      opacity: 0; transform: translateY(30px);
+      animation: fadeUp 0.8s ease 0.8s forwards;
+    }
+    .btn-primary {
+      background: var(--ink); color: white; border: none;
+      border-radius: 99px; padding: 16px 36px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      text-decoration: none; display: inline-block;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.2); }
+    .btn-secondary {
+      background: transparent; color: var(--ink); border: 1.5px solid var(--line);
+      border-radius: 99px; padding: 16px 36px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      text-decoration: none; display: inline-block;
+      transition: border-color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--ink-3); }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== SCROLL REVEAL ===== */
+    .reveal {
+      opacity: 0; transform: translateY(48px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+      opacity: 1; transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    /* ===== SECTION LABEL ===== */
+    .section-eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--ink-3);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 900; line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .section-body {
+      font-size: clamp(15px, 2vw, 18px);
+      color: var(--ink-2); line-height: 1.75;
+      max-width: 560px;
+    }
+
+    /* ===== FEATURE ===== */
+    .feature-section { background: var(--bg); }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px; margin-top: 48px;
+      width: 100%; max-width: 800px;
+      text-align: left;
+    }
+    .feature-card {
+      background: #F5F5F7; border-radius: var(--radius);
+      padding: 28px 24px;
+    }
+    .feature-icon  { font-size: 32px; margin-bottom: 14px; }
+    .feature-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .feature-body  { font-size: 13px; color: var(--ink-3); line-height: 1.6; }
+
+    /* ===== HOWTO ===== */
+    .howto-section { background: #F5F5F7; }
+    .howto-list {
+      margin-top: 48px; width: 100%; max-width: 560px;
+      display: flex; flex-direction: column; gap: 0;
+      text-align: left;
+    }
+    .howto-item {
+      display: flex; gap: 20px; align-items: flex-start;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .howto-item:last-child { border-bottom: none; }
+    .howto-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--yellow); color: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 900; flex-shrink: 0;
+    }
+    .howto-content strong { font-size: 16px; font-weight: 700; display: block; margin-bottom: 4px; }
+    .howto-content p { font-size: 14px; color: var(--ink-3); line-height: 1.6; }
+
+    /* ===== STATS ===== */
+    .stats-section { background: var(--ink); color: white; }
+    .stats-section .section-title { color: white; }
+    .stats-section .section-body  { color: rgba(255,255,255,0.6); }
+    .stats-grid {
+      display: flex; gap: 0;
+      margin-top: 48px; width: 100%; max-width: 560px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .stat-item {
+      flex: 1; padding: 28px 16px; text-align: center;
+      border-right: 1px solid rgba(255,255,255,0.12);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-num   { font-size: 36px; font-weight: 900; color: var(--yellow); }
+    .stat-label { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; font-weight: 600; }
+
+    /* ===== CTA SECTION ===== */
+    .cta-section { background: var(--yellow); }
+    .cta-section .section-title { color: var(--ink); }
+    .cta-section .section-body  { color: var(--ink-2); }
+    .cta-section .btn-primary { background: var(--ink); }
+    .cta-section .btn-secondary { border-color: rgba(0,0,0,0.2); color: var(--ink); }
+
+    /* ===== FOOTER ===== */
+    footer {
+      padding: 32px 24px;
+      text-align: center;
+      border-top: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+    }
+    footer img { height: 18px; opacity: 0.3; }
+    footer p { font-size: 12px; color: var(--ink-3); }
+
+    @media (max-width: 480px) {
+      .feature-grid { grid-template-columns: 1fr; }
+      .stats-grid { flex-direction: column; }
+      .stat-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.12); }
+      .stat-item:last-child { border-bottom: none; }
+      section { padding: 80px 20px 60px; }
+    }
   </style>
 </head>
 <body>
 
-<!-- メール認証モーダル -->
-<div class="modal-overlay hidden" id="email-modal">
-  <div class="modal">
-    <div class="modal-title" id="email-modal-title">ログイン</div>
-    <div class="modal-sub"   id="email-modal-sub">メールアドレスとパスワードを入力してください</div>
-    <label class="modal-label">メールアドレス</label>
-    <input class="modal-input" type="email"    id="modal-email"    placeholder="example@email.com"/>
-    <label class="modal-label">パスワード</label>
-    <input class="modal-input" type="password" id="modal-password" placeholder="6文字以上"/>
-    <div id="modal-error" style="color:#FF3B30;font-size:13px;margin-bottom:10px;display:none;"></div>
-    <button class="modal-submit" id="email-modal-submit">ログイン</button>
-    <button class="modal-cancel" id="email-modal-toggle" style="margin-bottom:8px;">新規登録はこちら</button>
-    <button class="modal-cancel" id="email-modal-cancel">キャンセル</button>
+<nav>
+  <img src="handit_logo.png" alt="HANDIT!" class="nav-logo"/>
+  <a href="learn.html" class="nav-btn">学習を始める</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-eyebrow">日本手話学習アプリ</div>
+  <img src="handit_logo.png" alt="HANDIT!" class="hero-logo"/>
+  <p class="hero-tagline">カメラ1つで、日本手話をリアルタイムに練習。<br>AIがあなたの手話を即座に判定します。</p>
+  <div class="hero-cta-wrap">
+    <a href="learn.html" class="btn-primary">学習を始める →</a>
+    <a href="free.html"  class="btn-secondary">自由手話モード</a>
   </div>
-</div>
+</section>
 
-<!-- ホーム -->
-<div class="home-wrap">
-  <img src="handit_logo.png" alt="HANDIT!" class="home-logo"/>
-
-  <div class="home-modes">
-    <a href="learn.html" class="home-mode-btn">
-      <div class="home-mode-icon" style="background:#E6FAF2;">📚</div>
-      <div class="home-mode-info">
-        <div class="home-mode-title">学習モード</div>
-        <div class="home-mode-sub">レベルをクリアしながら手話を学ぶ</div>
-      </div>
-      <div class="home-mode-arrow">›</div>
-    </a>
-    <a href="free.html" class="home-mode-btn">
-      <div class="home-mode-icon" style="background:#D0F0FD;">🤲</div>
-      <div class="home-mode-info">
-        <div class="home-mode-title">自由手話モード</div>
-        <div class="home-mode-sub">手話をすると文章になっていく</div>
-      </div>
-      <div class="home-mode-arrow">›</div>
-    </a>
-  </div>
-
-  <div class="home-auth">
-    <!-- ログイン済み -->
-    <div class="home-user-bar hidden" id="user-bar">
-      <div class="home-user-avatar" id="user-avatar">🤟</div>
-      <div class="home-user-info">
-        <div class="home-user-name" id="user-display-name">ユーザー</div>
-        <div class="home-user-stats">
-          <span class="home-user-stat">🔥 <span id="user-streak">0</span> 連続</span>
-          <span class="home-user-stat">⭐ <span id="user-xp">0</span> XP</span>
-        </div>
-      </div>
-      <button class="home-logout-btn" id="logout-btn">ログアウト</button>
+<!-- FEATURES -->
+<section class="feature-section">
+  <div class="section-eyebrow reveal">特徴</div>
+  <h2 class="section-title reveal reveal-delay-1">手話学習を、<br>もっと身近に。</h2>
+  <p class="section-body reveal reveal-delay-2">特別な機材は不要。普段使いのカメラだけで、本格的な手話学習が始められます。</p>
+  <div class="feature-grid">
+    <div class="feature-card reveal reveal-delay-1">
+      <div class="feature-icon">📷</div>
+      <div class="feature-title">カメラだけでOK</div>
+      <div class="feature-body">特別なセンサーや機材は不要。普通のWebカメラやスマホで使えます。</div>
     </div>
-    <!-- 未ログイン -->
-    <div class="home-login-btns" id="login-btns">
-      <button class="btn-google" id="google-login-btn">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Googleでログイン
-      </button>
-      <button class="btn-email" id="email-login-btn">✉️ メールで登録</button>
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">リアルタイム判定</div>
+      <div class="feature-body">AIがブラウザ内で即座に認識。映像がサーバーに送られることはありません。</div>
+    </div>
+    <div class="feature-card reveal reveal-delay-3">
+      <div class="feature-icon">📚</div>
+      <div class="feature-title">レベル制学習</div>
+      <div class="feature-body">レベルをクリアしながら段階的に手話を学べます。</div>
+    </div>
+    <div class="feature-card reveal reveal-delay-4">
+      <div class="feature-icon">🔄</div>
+      <div class="feature-title">復習テスト</div>
+      <div class="feature-body">レッスン後の復習テストで定着度を確認できます。</div>
     </div>
   </div>
-</div>
+</section>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<!-- HOWTO -->
+<section class="howto-section">
+  <div class="section-eyebrow reveal">使い方</div>
+  <h2 class="section-title reveal reveal-delay-1">3ステップで<br>始められます</h2>
+  <div class="howto-list">
+    <div class="howto-item reveal reveal-delay-1">
+      <div class="howto-num">1</div>
+      <div class="howto-content">
+        <strong>レベルを選ぶ</strong>
+        <p>学習モードからレベルを選択してください。あいさつ・きもちなど単語のカテゴリ別に学べます。</p>
+      </div>
+    </div>
+    <div class="howto-item reveal reveal-delay-2">
+      <div class="howto-num">2</div>
+      <div class="howto-content">
+        <strong>参考動画を見て手話をする</strong>
+        <p>お題の手話の動きを参考動画で確認してから、カメラに向かって手話をしてください。</p>
+      </div>
+    </div>
+    <div class="howto-item reveal reveal-delay-3">
+      <div class="howto-num">3</div>
+      <div class="howto-content">
+        <strong>復習テストで確認</strong>
+        <p>全単語を学んだ後、復習テストで定着度を確認します。繰り返して覚えましょう。</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyB-YZ16629_Eadt8mu2kxtZU5ehZ9-dsGA",
-  authDomain: "handit-a5cfa.firebaseapp.com",
-  projectId: "handit-a5cfa",
-  storageBucket: "handit-a5cfa.firebasestorage.app",
-  messagingSenderId: "398275846471",
-  appId: "1:398275846471:web:eb7571dcd1e920964d2c62"
-};
+<!-- STATS -->
+<section class="stats-section">
+  <div class="section-eyebrow reveal" style="color:rgba(255,255,255,0.4);">あなたの記録</div>
+  <h2 class="section-title reveal reveal-delay-1">学習の進捗</h2>
+  <p class="section-body reveal reveal-delay-2">続けるほど、手話が身につきます。</p>
+  <div class="stats-grid reveal reveal-delay-3">
+    <div class="stat-item">
+      <div class="stat-num" id="stat-xp">0</div>
+      <div class="stat-label">⭐ XP</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="stat-cleared">0</div>
+      <div class="stat-label">✅ クリア済み</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">3</div>
+      <div class="stat-label">📖 学べる単語</div>
+    </div>
+  </div>
+</section>
 
-const app      = initializeApp(firebaseConfig);
-const auth     = getAuth(app);
-const db       = getFirestore(app);
-const provider = new GoogleAuthProvider();
-let isRegisterMode = false;
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="section-title reveal">さっそく<br>試してみよう</h2>
+  <p class="section-body reveal reveal-delay-1">登録不要ですぐに体験できます。</p>
+  <div class="hero-cta-wrap reveal reveal-delay-2">
+    <a href="learn.html" class="btn-primary">学習を始める →</a>
+    <a href="free.html"  class="btn-secondary">自由手話モード</a>
+  </div>
+</section>
 
-// ユーザーデータをFirestoreから取得・初期化
-async function loadUserData(uid) {
-  const ref  = doc(db, 'users', uid);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    return snap.data();
-  } else {
-    const defaultData = { xp:0, streak:0, cleared:[], createdAt: serverTimestamp() };
-    await setDoc(ref, defaultData);
-    return defaultData;
-  }
-}
+<footer>
+  <img src="handit_logo.png" alt="HANDIT!"/>
+  <p>© 2026 HANDIT!</p>
+</footer>
 
-// 認証状態の監視
-onAuthStateChanged(auth, async user => {
-  const userBar   = document.getElementById('user-bar');
-  const loginBtns = document.getElementById('login-btns');
-  if (user) {
-    userBar.classList.remove('hidden');
-    loginBtns.classList.add('hidden');
-    document.getElementById('user-display-name').textContent = user.displayName || user.email;
-    const avatar = document.getElementById('user-avatar');
-    if (user.photoURL) {
-      avatar.innerHTML = `<img src="${user.photoURL}" alt="avatar"/>`;
-    } else {
-      avatar.textContent = '🤟';
+<script>
+// 進捗表示
+document.getElementById('stat-xp').textContent      = localStorage.getItem('handit_xp') || 0;
+document.getElementById('stat-cleared').textContent = JSON.parse(localStorage.getItem('handit_cleared')||'[]').length;
+
+// スクロールアニメーション
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
     }
-    // Firestoreからデータ取得してUIに反映
-    try {
-      const data = await loadUserData(user.uid);
-      document.getElementById('user-xp').textContent     = data.xp     || 0;
-      document.getElementById('user-streak').textContent = data.streak  || 0;
-      // learn.htmlで使えるようlocalStorageにも同期
-      localStorage.setItem('handit_xp',      data.xp      || 0);
-      localStorage.setItem('handit_streak',  data.streak  || 0);
-      localStorage.setItem('handit_cleared', JSON.stringify(data.cleared || []));
-      localStorage.setItem('handit_uid',     user.uid);
-    } catch(e) { console.error('Firestore読み込みエラー:', e); }
-  } else {
-    userBar.classList.add('hidden');
-    loginBtns.classList.remove('hidden');
-    localStorage.removeItem('handit_uid');
-  }
-});
+  });
+}, { threshold: 0.15 });
 
-// Googleログイン
-document.getElementById('google-login-btn').addEventListener('click', async () => {
-  try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); }
-});
-
-// メールモーダル
-document.getElementById('email-login-btn').addEventListener('click', () => {
-  isRegisterMode = false; updateEmailModal();
-  document.getElementById('email-modal').classList.remove('hidden');
-});
-document.getElementById('email-modal-cancel').addEventListener('click', () => {
-  document.getElementById('email-modal').classList.add('hidden'); clearError();
-});
-document.getElementById('email-modal-toggle').addEventListener('click', () => {
-  isRegisterMode = !isRegisterMode; updateEmailModal();
-});
-
-function updateEmailModal() {
-  document.getElementById('email-modal-title').textContent  = isRegisterMode ? '新規登録' : 'ログイン';
-  document.getElementById('email-modal-sub').textContent    = isRegisterMode ? 'メールアドレスとパスワードを登録してください' : 'メールアドレスとパスワードを入力してください';
-  document.getElementById('email-modal-submit').textContent = isRegisterMode ? '登録する' : 'ログイン';
-  document.getElementById('email-modal-toggle').textContent = isRegisterMode ? 'すでにアカウントをお持ちの方' : '新規登録はこちら';
-  clearError();
-}
-function clearError() { const e=document.getElementById('modal-error'); e.style.display='none'; e.textContent=''; }
-function showError(msg){ const e=document.getElementById('modal-error'); e.textContent=msg; e.style.display='block'; }
-
-document.getElementById('email-modal-submit').addEventListener('click', async () => {
-  const email    = document.getElementById('modal-email').value.trim();
-  const password = document.getElementById('modal-password').value;
-  if (!email||!password) { showError('メールとパスワードを入力してください'); return; }
-  try {
-    if (isRegisterMode) {
-      await createUserWithEmailAndPassword(auth, email, password);
-    } else {
-      await signInWithEmailAndPassword(auth, email, password);
-    }
-    document.getElementById('email-modal').classList.add('hidden'); clearError();
-  } catch(e) {
-    const msgs = {
-      'auth/email-already-in-use': 'このメールアドレスはすでに登録されています',
-      'auth/invalid-email':        'メールアドレスの形式が正しくありません',
-      'auth/weak-password':        'パスワードは6文字以上にしてください',
-      'auth/user-not-found':       'アカウントが見つかりません',
-      'auth/wrong-password':       'パスワードが間違っています',
-      'auth/invalid-credential':   'メールアドレスまたはパスワードが間違っています',
-    };
-    showError(msgs[e.code] || 'エラーが発生しました');
-  }
-});
-
-// ログアウト
-document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 </script>
 </body>
 </html>
