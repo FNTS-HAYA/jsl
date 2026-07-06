@@ -21,6 +21,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 
 body {
   font-family: -apple-system, 'Helvetica Neue', Arial, 'Noto Sans JP', sans-serif;
@@ -67,147 +68,24 @@ body {
 .loading-text { font-size: 14px; color: var(--ink-3); font-weight: 500; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ===== HOME ===== */
-.home-hero {
-  background: var(--yellow);
-  padding: 48px 24px 40px;
-  text-align: center;
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
+/* ===== カメラ（ミラー反転） ===== */
+.camera-wrap {
+  width: 100%; position: relative; border-radius: var(--radius);
+  overflow: hidden; background: #111; aspect-ratio: 4/3;
+  box-shadow: var(--shadow-lg);
 }
-.home-logo { width: min(240px, 60vw); }
-.home-tagline {
-  font-size: 15px; color: var(--ink-2); line-height: 1.6;
-  max-width: 400px;
+.camera-wrap video  {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transform: scaleX(-1);
 }
-.home-cta {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: var(--ink); color: white;
-  font-size: 16px; font-weight: 700;
-  border: none; border-radius: 99px;
-  padding: 14px 32px; cursor: pointer;
-  text-decoration: none;
-  transition: opacity 0.15s;
+.camera-wrap canvas {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  transform: scaleX(-1);
 }
-.home-cta:hover { opacity: 0.82; }
-
-.home-section {
-  max-width: 600px; margin: 0 auto;
-  padding: 40px 20px;
-}
-.home-section-title {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--ink-3); margin-bottom: 16px;
-}
-.home-section-lead {
-  font-size: clamp(20px, 4vw, 26px); font-weight: 800;
-  line-height: 1.3; margin-bottom: 12px;
-}
-.home-section-body {
-  font-size: 15px; color: var(--ink-2); line-height: 1.75;
-}
-
-/* 特徴カード */
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px; margin-top: 24px;
-}
-.feature-card {
-  background: var(--white); border: 1.5px solid var(--line);
-  border-radius: var(--radius); padding: 20px 16px;
-  box-shadow: var(--shadow);
-}
-.feature-icon  { font-size: 26px; margin-bottom: 10px; }
-.feature-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-.feature-body  { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
-
-/* 使い方 */
-.howto-list { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
-.howto-item {
-  display: flex; align-items: flex-start; gap: 14px;
-  background: var(--white); border: 1.5px solid var(--line);
-  border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow);
-}
-.howto-num {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--yellow); color: var(--ink);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 900; flex-shrink: 0;
-}
-.howto-text { font-size: 14px; line-height: 1.6; }
-.howto-text strong { font-weight: 700; display: block; margin-bottom: 2px; }
-
-/* 進捗 */
-.stats-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 10px; margin-top: 20px;
-}
-.stat-card {
-  background: var(--white); border: 1.5px solid var(--line);
-  border-radius: var(--radius); padding: 16px 12px;
-  text-align: center; box-shadow: var(--shadow);
-}
-.stat-num   { font-size: 28px; font-weight: 800; color: var(--ink); }
-.stat-label { font-size: 11px; color: var(--ink-3); font-weight: 600; margin-top: 2px; }
-
-/* モード */
-.mode-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-.mode-btn {
-  display: flex; align-items: center; gap: 14px;
-  background: var(--white); border: 1.5px solid var(--line);
-  border-radius: var(--radius); padding: 16px 18px;
-  cursor: pointer; box-shadow: var(--shadow);
-  transition: transform 0.15s, box-shadow 0.15s;
-  text-decoration: none; color: inherit;
-}
-.mode-btn:hover  { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-.mode-btn:active { transform: translateY(0); }
-.mode-icon {
-  width: 44px; height: 44px; border-radius: 11px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
-}
-.mode-info { flex: 1; }
-.mode-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-.mode-sub   { font-size: 12px; color: var(--ink-3); }
-.mode-arrow { font-size: 18px; color: var(--ink-3); }
-
-/* フッター */
-.home-footer {
-  border-top: 1px solid var(--line);
-  padding: 24px 20px;
-  text-align: center;
-}
-.home-footer img { height: 18px; opacity: 0.35; }
-
-/* ===== LEARN — レベル選択 ===== */
-.level-wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 60px; display: flex; flex-direction: column; gap: 20px; }
-.level-page-title { font-size: 20px; font-weight: 800; }
-.level-list { display: flex; flex-direction: column; gap: 10px; }
-.level-card {
-  background: var(--white); border: 1.5px solid var(--line);
-  border-radius: var(--radius); padding: 16px 18px;
-  display: flex; align-items: center; gap: 14px;
-  box-shadow: var(--shadow); cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.level-card:hover  { transform: translateX(4px); box-shadow: var(--shadow-lg); }
-.level-card.locked { opacity: 0.4; cursor: not-allowed; }
-.level-card.locked:hover { transform: none; box-shadow: var(--shadow); }
-.level-num {
-  width: 46px; height: 46px; border-radius: 11px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; font-weight: 900; flex-shrink: 0;
-}
-.level-info { flex: 1; }
-.level-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-.level-words { font-size: 12px; color: var(--ink-3); }
-.level-status { font-size: 20px; }
 
 /* ===== LESSON SCREEN ===== */
 .lesson-screen { display: none; min-height: calc(100vh - 52px); flex-direction: column; max-width: 560px; margin: 0 auto; padding: 0 16px 24px; }
 .lesson-screen.active { display: flex; }
-
 .ls-header { padding: 16px 0 0; display: flex; align-items: center; gap: 12px; }
 .ls-back {
   width: 32px; height: 32px; border-radius: 50%;
@@ -217,11 +95,7 @@ body {
 }
 .ls-progress-wrap { flex: 1; background: var(--line); border-radius: 99px; height: 7px; overflow: hidden; }
 .ls-progress-bar  { height: 100%; background: var(--yellow); border-radius: 99px; transition: width 0.4s ease; }
-.ls-phase-label {
-  font-size: 11px; font-weight: 700; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.08em; flex-shrink: 0;
-}
-
+.ls-phase-label   { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; flex-shrink: 0; }
 .ls-body { flex: 1; padding: 16px 0; display: flex; flex-direction: column; gap: 14px; }
 
 /* 動画スペース */
@@ -232,10 +106,7 @@ body {
   border: 1.5px dashed #333;
 }
 .video-space video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.video-placeholder {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  color: #555;
-}
+.video-placeholder { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #555; }
 .video-placeholder-icon { font-size: 32px; }
 .video-placeholder-text { font-size: 12px; }
 
@@ -246,14 +117,6 @@ body {
 }
 .ls-prompt-label { font-size: 11px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
 .ls-prompt-word  { font-size: clamp(36px, 9vw, 52px); font-weight: 900; color: var(--ink); line-height: 1.1; }
-
-/* カメラ */
-.camera-wrap {
-  width: 100%; position: relative; border-radius: var(--radius);
-  overflow: hidden; background: #111; aspect-ratio: 4/3; box-shadow: var(--shadow-lg);
-}
-.camera-wrap video  { width: 100%; height: 100%; object-fit: cover; display: block; }
-.camera-wrap canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
 .hold-track { width: 100%; background: var(--line); border-radius: 99px; height: 5px; overflow: hidden; }
 .hold-fill  { height: 100%; background: var(--yellow); border-radius: 99px; width: 0%; transition: width 0.1s linear; }
@@ -347,15 +210,7 @@ body {
 }
 .complete-home-btn:hover { opacity: 0.85; }
 
-/* ===== DIVIDER ===== */
-.home-divider { border: none; border-top: 1px solid var(--line); }
-
 /* ===== RESPONSIVE ===== */
 @media (max-width: 480px) {
-  .feature-grid { grid-template-columns: 1fr 1fr; }
-  .stats-grid   { grid-template-columns: repeat(3, 1fr); }
   .ls-prompt-word { font-size: 36px; }
-}
-@media (max-width: 360px) {
-  .stats-grid { grid-template-columns: 1fr 1fr; }
 }

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>手話図鑑 — HANDIT!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .dict-wrap { max-width: 600px; margin: 0 auto; padding: 24px 16px 60px; }
+    .dict-title { font-size: 20px; font-weight: 900; margin-bottom: 24px; }
+
+    /* カテゴリタブ */
+    .dict-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .dict-tab {
+      padding: 8px 16px; border-radius: 99px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      background: var(--white); border: 1.5px solid var(--line);
+      color: var(--ink-3); transition: all 0.15s;
+    }
+    .dict-tab.active { background: var(--yellow); border-color: var(--yellow-d); color: var(--ink); }
+
+    /* 単語グリッド */
+    .dict-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .dict-card {
+      background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius); padding: 0;
+      box-shadow: var(--shadow); cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .dict-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .dict-card:active { transform: translateY(0); }
+
+    /* 動画サムネ部分 */
+    .dict-thumb {
+      background: #111; aspect-ratio: 4/3;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .dict-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .dict-thumb-placeholder {
+      display: flex; flex-direction: column; align-items: center; gap: 6px; color: #444;
+    }
+    .dict-thumb-placeholder-icon { font-size: 28px; }
+    .dict-thumb-placeholder-text { font-size: 11px; }
+    .dict-play-icon {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.3);
+      font-size: 28px; opacity: 0; transition: opacity 0.15s;
+    }
+    .dict-card:hover .dict-play-icon { opacity: 1; }
+
+    .dict-card-body { padding: 10px 12px; }
+    .dict-word  { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+    .dict-yomi  { font-size: 11px; color: var(--ink-3); }
+
+    /* モーダル */
+    .dict-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px;
+    }
+    .dict-modal-overlay.hidden { display: none; }
+    .dict-modal {
+      background: var(--white); border-radius: 24px;
+      width: 100%; max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .dict-modal-video {
+      background: #111; aspect-ratio: 16/9;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dict-modal-video video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .dict-modal-video-placeholder {
+      display: flex; flex-direction: column; align-items: center; gap: 10px; color: #555;
+      font-size: 14px;
+    }
+    .dict-modal-body { padding: 20px 22px 24px; }
+    .dict-modal-word { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+    .dict-modal-cat  { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-bottom: 12px; }
+    .dict-modal-desc { font-size: 14px; color: var(--ink-2); line-height: 1.7; margin-bottom: 16px; }
+    .dict-modal-close {
+      width: 100%; padding: 12px; background: var(--line);
+      border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+      cursor: pointer; color: var(--ink-2);
+    }
+
+    @media (max-width: 400px) {
+      .dict-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
+  <a href="index.html" class="topbar-link">← ホーム</a>
+</nav>
+
+<!-- モーダル -->
+<div class="dict-modal-overlay hidden" id="dict-modal">
+  <div class="dict-modal">
+    <div class="dict-modal-video" id="modal-video-wrap">
+      <div class="dict-modal-video-placeholder">
+        <span style="font-size:40px;">🎬</span>
+        <span>動画準備中</span>
+      </div>
+    </div>
+    <div class="dict-modal-body">
+      <div class="dict-modal-word" id="modal-word">—</div>
+      <div class="dict-modal-cat"  id="modal-cat">—</div>
+      <div class="dict-modal-desc" id="modal-desc">—</div>
+      <button class="dict-modal-close" id="modal-close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="dict-wrap">
+  <div class="dict-title">📖 手話図鑑</div>
+
+  <!-- カテゴリタブ -->
+  <div class="dict-tabs" id="dict-tabs"></div>
+
+  <!-- 単語グリッド -->
+  <div class="dict-grid" id="dict-grid"></div>
+</div>
+
+<script>
+// ===================================================
+// 手話図鑑データ
+// 単語を追加するときはここに追加するだけ
+// video: 動画ファイルのパス（なければnull）
+// desc:  手話の動き方の説明
+// ===================================================
+const DICTIONARY = [
+  // あいさつ
+  { word:'おはよう',     yomi:'おはよう',         cat:'あいさつ', video:null, desc:'右手をグーにして額の横に当て、前方へ下げる動作。' },
+  { word:'こんにちは',   yomi:'こんにちは',       cat:'あいさつ', video:null, desc:'人差し指と中指を額に当て、前方へ下げる動作。' },
+  { word:'ありがとう',   yomi:'ありがとう',       cat:'あいさつ', video:null, desc:'右手を胸の前に出し、前方へ傾ける動作。' },
+  // きもち
+  { word:'好き',         yomi:'すき',             cat:'きもち',   video:null, desc:'胸の前で右手をグーにして、ハートを作るように動かす。' },
+  { word:'嫌い',         yomi:'きらい',           cat:'きもち',   video:null, desc:'手を払うように外側へ振る動作。' },
+  // 会話
+  { word:'もう一度',     yomi:'もういちど',       cat:'会話',     video:null, desc:'片手を上下に動かして「繰り返す」を表現する。' },
+  { word:'わかりました', yomi:'わかりました',     cat:'会話',     video:null, desc:'右手を額の横から前方に開く動作。' },
+  { word:'ゆっくり',     yomi:'ゆっくり',         cat:'会話',     video:null, desc:'両手をゆっくり前方に押し出す動作。' },
+  // 自己紹介
+  { word:'私',           yomi:'わたし',           cat:'自己紹介', video:null, desc:'右手の人差し指で自分の胸を指す。' },
+  { word:'名前',         yomi:'なまえ',           cat:'自己紹介', video:null, desc:'両手の人差し指を交差させる動作。' },
+];
+
+const CATEGORIES = ['すべて', ...new Set(DICTIONARY.map(d => d.cat))];
+let currentCat = 'すべて';
+
+// タブ構築
+function buildTabs() {
+  const tabs = document.getElementById('dict-tabs');
+  CATEGORIES.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'dict-tab' + (cat === currentCat ? ' active' : '');
+    btn.textContent = cat;
+    btn.addEventListener('click', () => {
+      currentCat = cat;
+      document.querySelectorAll('.dict-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      buildGrid();
+    });
+    tabs.appendChild(btn);
+  });
+}
+
+// グリッド構築
+function buildGrid() {
+  const grid = document.getElementById('dict-grid');
+  grid.innerHTML = '';
+  const filtered = currentCat === 'すべて' ? DICTIONARY : DICTIONARY.filter(d => d.cat === currentCat);
+
+  filtered.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'dict-card';
+    card.innerHTML = `
+      <div class="dict-thumb">
+        ${item.video
+          ? `<video src="${item.video}" muted loop></video><div class="dict-play-icon">▶</div>`
+          : `<div class="dict-thumb-placeholder"><div class="dict-thumb-placeholder-icon">🤟</div><div class="dict-thumb-placeholder-text">動画準備中</div></div>`
+        }
+      </div>
+      <div class="dict-card-body">
+        <div class="dict-word">${item.word}</div>
+        <div class="dict-yomi">${item.cat}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => openModal(item));
+    grid.appendChild(card);
+  });
+}
+
+// モーダル
+function openModal(item) {
+  document.getElementById('modal-word').textContent = item.word;
+  document.getElementById('modal-cat').textContent  = item.cat;
+  document.getElementById('modal-desc').textContent = item.desc || '説明準備中';
+
+  const wrap = document.getElementById('modal-video-wrap');
+  if (item.video) {
+    wrap.innerHTML = `<video src="${item.video}" controls autoplay loop style="width:100%;height:100%;object-fit:cover;display:block;"></video>`;
+  } else {
+    wrap.innerHTML = `<div class="dict-modal-video-placeholder"><span style="font-size:40px;">🎬</span><span>動画準備中</span></div>`;
+  }
+
+  document.getElementById('dict-modal').classList.remove('hidden');
+}
+
+document.getElementById('modal-close').addEventListener('click', () => {
+  document.getElementById('dict-modal').classList.add('hidden');
+  // 動画停止
+  const v = document.querySelector('#modal-video-wrap video');
+  if (v) v.pause();
+});
+
+document.getElementById('dict-modal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    this.classList.add('hidden');
+    const v = document.querySelector('#modal-video-wrap video');
+    if (v) v.pause();
+  }
+});
+
+buildTabs();
+buildGrid();
+</script>
+</body>
+</html>

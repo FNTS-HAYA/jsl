@@ -8,6 +8,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
   <style>
+    /* ===== ページタブ ===== */
+    .page-tabs {
+      display: flex; border-bottom: 2px solid var(--line);
+      background: var(--white); position: sticky; top: 52px; z-index: 40;
+    }
+    .page-tab {
+      flex: 1; padding: 14px; text-align: center;
+      font-size: 14px; font-weight: 700; color: var(--ink-3);
+      cursor: pointer; border: none; background: none;
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .page-tab.active { color: var(--ink); border-bottom-color: var(--yellow); }
+
+    /* ===== マップ ===== */
     .map-wrap {
       max-width: 400px; margin: 0 auto;
       padding: 24px 20px 80px;
@@ -49,6 +64,113 @@
     }
     .map-label-badge.locked-badge  { background: #F0F0F0; color: var(--ink-3); border-color: var(--line); }
     .map-label-badge.cleared-badge { background: var(--green-l); color: var(--green-d); border-color: var(--green); }
+
+    /* ===== 図鑑 ===== */
+    .dict-wrap { max-width: 600px; margin: 0 auto; padding: 24px 16px 60px; }
+    .dict-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .dict-tab {
+      padding: 7px 14px; border-radius: 99px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      background: var(--white); border: 1.5px solid var(--line);
+      color: var(--ink-3); transition: all 0.15s;
+    }
+    .dict-tab.active { background: var(--yellow); border-color: var(--yellow-d); color: var(--ink); }
+    .dict-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .dict-card {
+      background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow); cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .dict-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .dict-thumb {
+      background: #111; aspect-ratio: 4/3;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .dict-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .dict-thumb-ph { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #444; }
+    .dict-thumb-ph span:first-child { font-size: 28px; }
+    .dict-thumb-ph span:last-child  { font-size: 11px; }
+    .dict-play {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.3); font-size: 28px;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .dict-card:hover .dict-play { opacity: 1; }
+    .dict-card-body { padding: 10px 12px; }
+    .dict-word { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .dict-cat  { font-size: 11px; color: var(--ink-3); }
+
+    /* ===== 図鑑モーダル ===== */
+    .dict-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px;
+    }
+    .dict-modal-overlay.hidden { display: none; }
+    .dict-modal {
+      background: var(--white); border-radius: 24px;
+      width: 100%; max-width: 480px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .dict-modal-video {
+      background: #111; aspect-ratio: 16/9;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dict-modal-video video { width: 100%; height: 100%; object-fit: cover; }
+    .dict-modal-ph { display: flex; flex-direction: column; align-items: center; gap: 10px; color: #555; font-size: 14px; }
+    .dict-modal-body { padding: 20px 22px 24px; }
+    .dict-modal-word { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+    .dict-modal-cat  { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-bottom: 10px; }
+    .dict-modal-desc { font-size: 14px; color: var(--ink-2); line-height: 1.7; margin-bottom: 16px; }
+    .dict-modal-close {
+      width: 100%; padding: 12px; background: var(--line);
+      border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+      cursor: pointer; color: var(--ink-2);
+    }
+
+    /* ===== レッスン画面 ===== */
+    /* PC: 参考動画とカメラを横並び */
+    .lesson-media {
+      display: flex; gap: 12px; width: 100%;
+    }
+    .lesson-media .video-space { flex: 1; aspect-ratio: 4/3; }
+    .lesson-media .camera-wrap { flex: 1; }
+
+    /* スマホ: タブで切り替え */
+    .media-tabs {
+      display: none;
+      border-radius: var(--radius); overflow: hidden;
+      border: 1.5px solid var(--line);
+    }
+    .media-tab-btns {
+      display: flex; background: var(--line);
+    }
+    .media-tab-btn {
+      flex: 1; padding: 10px; text-align: center;
+      font-size: 13px; font-weight: 700; color: var(--ink-3);
+      cursor: pointer; border: none; background: none;
+      transition: all 0.15s;
+    }
+    .media-tab-btn.active { background: var(--white); color: var(--ink); }
+    .media-tab-content { display: none; }
+    .media-tab-content.active { display: block; }
+
+    @media (max-width: 560px) {
+      .lesson-media { display: none; }
+      .media-tabs   { display: block; }
+    }
+
+    /* ページコンテンツ切り替え */
+    .page-content { display: none; }
+    .page-content.active { display: block; }
   </style>
 </head>
 <body>
@@ -58,18 +180,48 @@
   <div class="loading-text" id="loading-text">モデルを読み込み中...</div>
 </div>
 
+<!-- 図鑑モーダル -->
+<div class="dict-modal-overlay hidden" id="dict-modal">
+  <div class="dict-modal">
+    <div class="dict-modal-video" id="modal-video-wrap">
+      <div class="dict-modal-ph"><span style="font-size:40px;">🎬</span><span>動画準備中</span></div>
+    </div>
+    <div class="dict-modal-body">
+      <div class="dict-modal-word" id="modal-word">—</div>
+      <div class="dict-modal-cat"  id="modal-cat">—</div>
+      <div class="dict-modal-desc" id="modal-desc">—</div>
+      <button class="dict-modal-close" id="modal-close">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <nav class="topbar">
   <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
   <a href="index.html" class="topbar-link">← ホーム</a>
 </nav>
 
-<div id="view-levels">
+<!-- ページタブ -->
+<div class="page-tabs" id="page-tabs-bar">
+  <button class="page-tab active" data-page="map">📚 学習マップ</button>
+  <button class="page-tab"        data-page="dict">📖 手話図鑑</button>
+</div>
+
+<!-- ===== 学習マップ ===== -->
+<div class="page-content active" id="page-map">
   <div class="map-wrap">
-    <div class="map-title">📚 学習マップ</div>
     <div id="level-map"></div>
   </div>
 </div>
 
+<!-- ===== 手話図鑑 ===== -->
+<div class="page-content" id="page-dict">
+  <div class="dict-wrap">
+    <div class="dict-tabs" id="dict-tabs"></div>
+    <div class="dict-grid" id="dict-grid"></div>
+  </div>
+</div>
+
+<!-- ===== レッスン画面 ===== -->
 <div class="lesson-screen" id="view-lesson">
   <div class="ls-header">
     <button class="ls-back" id="back-lesson">✕</button>
@@ -79,21 +231,51 @@
     <div class="ls-phase-label" id="ls-phase-label">学習</div>
   </div>
   <div class="ls-body">
-    <div class="video-space" id="video-space">
-      <video id="ref-video" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
-      <div class="video-placeholder" id="video-placeholder">
-        <div class="video-placeholder-icon">🎬</div>
-        <div class="video-placeholder-text">参考動画</div>
-      </div>
-    </div>
+
+    <!-- お題 -->
     <div class="ls-prompt">
       <div class="ls-prompt-label" id="ls-prompt-label">この手話をやってみよう</div>
       <div class="ls-prompt-word" id="challenge-word">—</div>
     </div>
-    <div class="camera-wrap">
-      <video id="video-lesson" autoplay playsinline muted></video>
-      <canvas id="canvas-lesson"></canvas>
+
+    <!-- PC: 横並び -->
+    <div class="lesson-media">
+      <div class="video-space" id="video-space-pc">
+        <video id="ref-video-pc" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+        <div class="video-placeholder" id="video-placeholder-pc">
+          <div class="video-placeholder-icon">🎬</div>
+          <div class="video-placeholder-text">参考動画</div>
+        </div>
+      </div>
+      <div class="camera-wrap">
+        <video id="video-lesson" autoplay playsinline muted></video>
+        <canvas id="canvas-lesson"></canvas>
+      </div>
     </div>
+
+    <!-- スマホ: タブ切り替え -->
+    <div class="media-tabs">
+      <div class="media-tab-btns">
+        <button class="media-tab-btn active" data-tab="camera">📷 カメラ</button>
+        <button class="media-tab-btn"        data-tab="video">🎬 参考動画</button>
+      </div>
+      <div class="media-tab-content active" id="tab-camera">
+        <div class="camera-wrap" style="border-radius:0;">
+          <video id="video-lesson-sp" autoplay playsinline muted></video>
+          <canvas id="canvas-lesson-sp"></canvas>
+        </div>
+      </div>
+      <div class="media-tab-content" id="tab-video">
+        <div class="video-space" id="video-space-sp" style="border-radius:0;border:none;aspect-ratio:4/3;">
+          <video id="ref-video-sp" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+          <div class="video-placeholder" id="video-placeholder-sp">
+            <div class="video-placeholder-icon">🎬</div>
+            <div class="video-placeholder-text">参考動画</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="hold-track"><div class="hold-fill" id="hold-fill"></div></div>
     <div class="detect-bar">
       <div class="detect-dot" id="lesson-dot"></div>
@@ -103,6 +285,7 @@
   </div>
 </div>
 
+<!-- ===== 完了 ===== -->
 <div class="complete-screen" id="view-complete">
   <div class="complete-emoji">🎉</div>
   <div class="complete-title">レベルクリア！</div>
@@ -120,6 +303,7 @@
   <a href="#" class="complete-home-btn" id="complete-back-btn">マップに戻る</a>
 </div>
 
+<!-- フィードバック -->
 <div class="feedback-overlay" id="feedback">
   <div class="feedback-title" id="fb-title"></div>
   <div class="feedback-sub"   id="fb-sub"></div>
@@ -133,11 +317,27 @@
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
 
 <script>
-// ===== LEVELS定義（app.jsと同じ内容） =====
+// ===================================================
+// 単語・レベルを追加するときはここを編集
+// ===================================================
 const LEVELS = [
   { id:1, title:'あいさつ', icon:'👋', color:'#FFFBDD', words:['おはよう','こんにちは','ありがとう'], videos:{} },
   { id:2, title:'きもち',   icon:'❤️', color:'#FFECEC', words:['好き','嫌い'],                       videos:{} },
   { id:3, title:'フレーズ', icon:'💬', color:'#E8F1FC', words:['もう一度'],                          videos:{} },
+];
+
+// 手話図鑑データ（動画を追加するときはvideoにパスを書く）
+const DICTIONARY = [
+  { word:'おはよう',     cat:'あいさつ', gif:null, desc:'右手をグーにして額の横に当て、前方へ下げる動作。' },
+  { word:'こんにちは',   cat:'あいさつ', gif:null, desc:'人差し指と中指を額に当て、前方へ下げる動作。' },
+  { word:'ありがとう',   cat:'あいさつ', gif:null, desc:'右手を胸の前に出し、前方へ傾ける動作。' },
+  { word:'好き',         cat:'きもち',   gif:null, desc:'胸の前で右手をグーにして、ハートを作るように動かす。' },
+  { word:'嫌い',         cat:'きもち',   gif:null, desc:'手を払うように外側へ振る動作。' },
+  { word:'もう一度',     cat:'会話',     gif:null, desc:'片手を上下に動かして「繰り返す」を表現する。' },
+  { word:'わかりました', cat:'会話',     gif:null, desc:'右手を額の横から前方に開く動作。' },
+  { word:'ゆっくり',     cat:'会話',     gif:null, desc:'両手をゆっくり前方に押し出す動作。' },
+  { word:'私',           cat:'自己紹介', gif:null, desc:'右手の人差し指で自分の胸を指す。' },
+  { word:'名前',         cat:'自己紹介', gif:null, desc:'両手の人差し指を交差させる動作。' },
 ];
 
 const MODEL_PATH     = 'dataset/model_single.onnx';
@@ -155,8 +355,31 @@ let currentPhase=PHASE.LEARN, currentLevel=null;
 let learnQueue=[], reviewQueue=[], currentChallenge=null, currentIdx=0;
 let correctCount=0, answered=false, holdCount=0;
 
+// スマホ判定
+function isMobile() { return window.innerWidth <= 560; }
+
 function getClearedLevels(){ return JSON.parse(localStorage.getItem('handit_cleared')||'[]'); }
-function setClearedLevel(id){ const c=getClearedLevels(); if(!c.includes(id)){c.push(id);localStorage.setItem('handit_cleared',JSON.stringify(c));} }
+function setClearedLevel(id){ const c=getClearedLevels();if(!c.includes(id)){c.push(id);localStorage.setItem('handit_cleared',JSON.stringify(c));} }
+
+// ===== ページタブ =====
+document.querySelectorAll('.page-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-' + btn.dataset.page).classList.add('active');
+  });
+});
+
+// ===== スマホ メディアタブ =====
+document.querySelectorAll('.media-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.media-tab-btn').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.media-tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
 
 // ===== マップ構築 =====
 function buildLevelList() {
@@ -194,6 +417,67 @@ function buildLevelList() {
   });
 }
 
+// ===== 図鑑構築 =====
+const DICT_CATS = ['すべて', ...new Set(DICTIONARY.map(d=>d.cat))];
+let currentDictCat = 'すべて';
+
+function buildDictTabs() {
+  const tabs=document.getElementById('dict-tabs');
+  DICT_CATS.forEach(cat=>{
+    const btn=document.createElement('button');
+    btn.className='dict-tab'+(cat===currentDictCat?' active':'');
+    btn.textContent=cat;
+    btn.addEventListener('click',()=>{
+      currentDictCat=cat;
+      document.querySelectorAll('.dict-tab').forEach(t=>t.classList.remove('active'));
+      btn.classList.add('active');
+      buildDictGrid();
+    });
+    tabs.appendChild(btn);
+  });
+}
+
+function buildDictGrid() {
+  const grid=document.getElementById('dict-grid');
+  grid.innerHTML='';
+  const items=currentDictCat==='すべて'?DICTIONARY:DICTIONARY.filter(d=>d.cat===currentDictCat);
+  items.forEach(item=>{
+    const card=document.createElement('div');
+    card.className='dict-card';
+    card.innerHTML=`
+      <div class="dict-thumb">
+        ${item.gif
+          ?`<img src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+          :`<div class="dict-thumb-ph"><span>🤟</span><span>準備中</span></div>`}
+      </div>
+      <div class="dict-card-body">
+        <div class="dict-word">${item.word}</div>
+        <div class="dict-cat">${item.cat}</div>
+      </div>`;
+    card.addEventListener('click',()=>openDictModal(item));
+    grid.appendChild(card);
+  });
+}
+
+function openDictModal(item) {
+  document.getElementById('modal-word').textContent=item.word;
+  document.getElementById('modal-cat').textContent=item.cat;
+  document.getElementById('modal-desc').textContent=item.desc||'説明準備中';
+  const wrap=document.getElementById('modal-video-wrap');
+  wrap.innerHTML=item.gif
+    ?`<img src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+    :`<div class="dict-modal-ph"><span style="font-size:40px;">🤟</span><span>GIF準備中</span></div>`;
+  document.getElementById('dict-modal').classList.remove('hidden');
+}
+
+document.getElementById('modal-close').addEventListener('click',()=>{
+  document.getElementById('dict-modal').classList.add('hidden');
+  const v=document.querySelector('#modal-video-wrap video');if(v)v.pause();
+});
+document.getElementById('dict-modal').addEventListener('click',function(e){
+  if(e.target===this){this.classList.add('hidden');const v=document.querySelector('#modal-video-wrap video');if(v)v.pause();}
+});
+
 // ===== 初期化 =====
 async function init() {
   document.getElementById('loading').classList.remove('hidden');
@@ -215,24 +499,36 @@ async function init() {
   faceMesh.setOptions({maxNumFaces:1,refineLandmarks:false,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
   faceMesh.onResults(onFaceResults);
   buildLevelList();
+  buildDictTabs();
+  buildDictGrid();
   document.getElementById('loading').classList.add('hidden');
 }
 
 // ===== カメラ =====
-async function startCam(vid,cid){
-  const video=document.getElementById(vid), canvas=document.getElementById(cid);
+async function startCam() {
+  const mobile=isMobile();
+  const vid=mobile?'video-lesson-sp':'video-lesson';
+  const cid=mobile?'canvas-lesson-sp':'canvas-lesson';
+  const video=document.getElementById(vid);
+  const canvas=document.getElementById(cid);
   const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
   video.srcObject=stream;
   await new Promise(r=>video.onloadedmetadata=r);
   canvas.width=video.videoWidth; canvas.height=video.videoHeight;
   let fc=0;
-  mpCam=new Camera(video,{onFrame:async()=>{fc++;await handsDetector.send({image:video});if(fc%2===0)await faceMesh.send({image:video});},width:640,height:480});
+  mpCam=new Camera(video,{
+    onFrame:async()=>{fc++;await handsDetector.send({image:video});if(fc%2===0)await faceMesh.send({image:video});},
+    width:640,height:480
+  });
   mpCam.start();
 }
-function stopCam(vid){
+
+function stopCam() {
   if(mpCam){mpCam.stop();mpCam=null;}
-  const v=document.getElementById(vid);
-  if(v&&v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}
+  ['video-lesson','video-lesson-sp'].forEach(id=>{
+    const v=document.getElementById(id);
+    if(v&&v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}
+  });
   frameBuffer=[];holdCount=0;inferring=false;currentHandsData={};currentFaceData=null;
 }
 
@@ -242,9 +538,12 @@ function onFaceResults(r){
   const lm=r.multiFaceLandmarks[0];currentFaceData={};
   for(const k in FACE_POINTS){const i=FACE_POINTS[k];currentFaceData[k]={x:lm[i].x,y:lm[i].y,z:lm[i].z};}
 }
-function onHandResults(r){
+
+function onHandResults(r) {
   if(!document.getElementById('view-lesson').classList.contains('active'))return;
-  const canvas=document.getElementById('canvas-lesson');
+  const mobile=isMobile();
+  const cid=mobile?'canvas-lesson-sp':'canvas-lesson';
+  const canvas=document.getElementById(cid);if(!canvas)return;
   const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
   currentHandsData={};
   if(!r.multiHandLandmarks||!r.multiHandLandmarks.length){frameBuffer=[];holdCount=0;return;}
@@ -292,7 +591,7 @@ async function startLesson(level){
   reviewQueue=[...level.words,...level.words].sort(()=>Math.random()-0.5);
   currentIdx=0;
   showView('view-lesson');
-  await startCam('video-lesson','canvas-lesson');
+  await startCam();
   nextChallenge();
 }
 
@@ -314,11 +613,37 @@ function nextChallenge(){
   document.getElementById('hold-fill').style.width='0%';
   document.getElementById('ls-progress').style.width=(currentIdx/(currentPhase===PHASE.LEARN?learnQueue.length:reviewQueue.length)*100)+'%';
   document.getElementById('ls-phase-label').textContent=currentPhase===PHASE.LEARN?'学習':'復習';
-  // 参考動画
+  // 参考動画更新
   const src=currentLevel.videos&&currentLevel.videos[currentChallenge];
-  const rv=document.getElementById('ref-video'),ph=document.getElementById('video-placeholder');
-  if(src){rv.src=src;rv.style.display='block';ph.style.display='none';rv.load();}
-  else{rv.style.display='none';ph.style.display='flex';}
+  ['pc','sp'].forEach(suffix=>{
+    const rv=document.getElementById('ref-video-'+suffix);
+    const ph=document.getElementById('video-placeholder-'+suffix);
+    if(src){
+      // GIFの場合はimgタグに差し替え
+      if(src.endsWith('.gif')){
+        const container=rv.parentElement;
+        if(!container.querySelector('img.ref-gif')){
+          const img=document.createElement('img');
+          img.className='ref-gif';
+          img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;position:absolute;top:0;left:0;';
+          container.appendChild(img);
+        }
+        const img=container.querySelector('img.ref-gif');
+        img.src=src; img.style.display='block';
+        rv.style.display='none';
+      } else {
+        rv.src=src;rv.style.display='block';rv.load();
+        const img=rv.parentElement.querySelector('img.ref-gif');
+        if(img)img.style.display='none';
+      }
+      if(ph)ph.style.display='none';
+    } else {
+      rv.style.display='none';
+      const img=rv.parentElement&&rv.parentElement.querySelector('img.ref-gif');
+      if(img)img.style.display='none';
+      if(ph)ph.style.display='flex';
+    }
+  });
   currentIdx++;
 }
 
@@ -330,7 +655,7 @@ function showFeedback(correct){
 }
 
 async function endLesson(){
-  stopCam('video-lesson');
+  stopCam();
   const xp=correctCount*10;
   if(currentLevel)setClearedLevel(currentLevel.id);
   const stored=parseInt(localStorage.getItem('handit_xp')||'0');
@@ -342,24 +667,31 @@ async function endLesson(){
 }
 
 function showView(id){
-  const vl=document.getElementById('view-levels');
-  if(vl)vl.style.display=id==='view-levels'?'block':'none';
+  document.getElementById('page-map').classList.remove('active');
+  document.getElementById('page-dict').classList.remove('active');
+  document.getElementById('page-tabs-bar').style.display=id==='view-lesson'||id==='view-complete'?'none':'flex';
   ['view-lesson','view-complete'].forEach(v=>{
     const el=document.getElementById(v);if(el)el.classList.toggle('active',v===id);
   });
 }
 
-document.getElementById('back-lesson').addEventListener('click',()=>{
-  stopCam('video-lesson');
+function goBack(){
+  stopCam();
   document.getElementById('feedback').className='feedback-overlay';
-  showView('view-levels');buildLevelList();
-});
+  document.getElementById('page-tabs-bar').style.display='flex';
+  document.getElementById('page-map').classList.add('active');
+  document.getElementById('view-lesson').classList.remove('active');
+  document.getElementById('view-complete').classList.remove('active');
+  buildLevelList();
+}
+
+document.getElementById('back-lesson').addEventListener('click', goBack);
 document.getElementById('fb-btn').addEventListener('click',()=>{
   document.getElementById('feedback').className='feedback-overlay';
   answered=false;holdCount=0;frameBuffer=[];nextChallenge();
 });
 document.getElementById('complete-back-btn').addEventListener('click',e=>{
-  e.preventDefault();showView('view-levels');buildLevelList();
+  e.preventDefault();goBack();
 });
 
 init();
