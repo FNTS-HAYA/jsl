@@ -58,7 +58,16 @@
 
     /* スマホ: 縦積み */
     @media (max-width: 700px) {
-      .tut-slide { flex-direction: column; gap: 16px; }
+      .tut-wrap { min-height: auto; }
+      .tut-slides { min-height: auto; }
+      .tut-slide {
+        flex-direction: column; gap: 16px;
+        position: relative; inset: auto;
+        display: none;
+        opacity: 1; transform: none; pointer-events: auto;
+      }
+      .tut-slide.active { display: flex; }
+      .tut-slide.exit { display: none; }
       .tut-col-left, .tut-col-mid, .tut-col-right { padding: 0; flex: none; }
       .tut-col-divider { display: none; }
     }
