@@ -236,7 +236,7 @@
 
 <nav>
   <img src="handit_logo.png" alt="HANDIT!" class="nav-logo"/>
-  <a href="learn.html" class="nav-btn">学習を始める</a>
+  <a href="#" onclick="goLearn(event)" class="nav-btn">学習を始める</a>
 </nav>
 
 <!-- HERO -->
@@ -246,7 +246,7 @@
   <img src="handit_logo.png" alt="HANDIT!" class="hero-logo"/>
   <p class="hero-tagline">カメラ1つで、日本手話をリアルタイムに練習。<br>AIがあなたの手話を即座に判定します。</p>
   <div class="hero-cta-wrap">
-    <a href="learn.html" class="btn-primary">学習を始める →</a>
+    <a href="#" onclick="goLearn(event)" class="btn-primary">学習を始める →</a>
     <a href="free.html"  class="btn-secondary">自由手話モード</a>
   </div>
 </section>
@@ -335,7 +335,7 @@
   <h2 class="section-title reveal">さっそく<br>試してみよう</h2>
   <p class="section-body reveal reveal-delay-1">登録不要ですぐに体験できます。</p>
   <div class="hero-cta-wrap reveal reveal-delay-2">
-    <a href="learn.html" class="btn-primary">学習を始める →</a>
+    <a href="#" onclick="goLearn(event)" class="btn-primary">学習を始める →</a>
     <a href="free.html"  class="btn-secondary">自由手話モード</a>
   </div>
 </section>
@@ -372,6 +372,15 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.15 });
 
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+function goLearn(e) {
+  e.preventDefault();
+  if (!localStorage.getItem('handit_tutorial_done')) {
+    window.location.href = 'tutorial.html';
+  } else {
+    window.location.href = 'learn.html';
+  }
+}
 </script>
 </body>
 </html>

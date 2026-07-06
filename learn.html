@@ -24,7 +24,7 @@
 
     /* ===== マップ ===== */
     .map-wrap {
-      max-width: 400px; margin: 0 auto;
+      max-width: 900px; margin: 0 auto;
       padding: 24px 20px 80px;
       display: flex; flex-direction: column; align-items: center;
     }
@@ -65,8 +65,25 @@
     .map-label-badge.locked-badge  { background: #F0F0F0; color: var(--ink-3); border-color: var(--line); }
     .map-label-badge.cleared-badge { background: var(--green-l); color: var(--green-d); border-color: var(--green); }
 
+    /* ===== PCマップ: 2カラム ===== */
+    @media (min-width: 700px) {
+      #level-map {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        width: 100%;
+      }
+      .map-node-wrap { width: 100%; }
+      .map-connector { display: none; }
+      .map-node { flex-direction: row !important; }
+      .map-circle { width: 80px; height: 80px; font-size: 32px; }
+      .map-label { padding: 16px 20px; }
+      .map-label-title { font-size: 17px; }
+      .map-wrap { max-width: 900px; }
+    }
+
     /* ===== 図鑑 ===== */
-    .dict-wrap { max-width: 600px; margin: 0 auto; padding: 24px 16px 60px; }
+    .dict-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
     .dict-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
     .dict-tab {
       padding: 7px 14px; border-radius: 99px;
@@ -77,7 +94,7 @@
     .dict-tab.active { background: var(--yellow); border-color: var(--yellow-d); color: var(--ink); }
     .dict-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
       gap: 12px;
     }
     .dict-card {
@@ -137,6 +154,22 @@
     }
 
     /* ===== レッスン画面 ===== */
+    @media (min-width: 700px) {
+      .ls-body {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 32px;
+      }
+      .ls-body-left {
+        flex: 1;
+        display: flex; flex-direction: column; gap: 14px;
+      }
+      .ls-body-right {
+        flex: 1;
+        display: flex; flex-direction: column; gap: 14px;
+      }
+      .ls-prompt-word { font-size: 56px; }
+    }
     /* PC: 参考動画とカメラを横並び */
     .lesson-media {
       display: flex; gap: 12px; width: 100%;
@@ -231,12 +264,23 @@
     <div class="ls-phase-label" id="ls-phase-label">学習</div>
   </div>
   <div class="ls-body">
+    <div class="ls-body-left">
 
     <!-- お題 -->
     <div class="ls-prompt">
       <div class="ls-prompt-label" id="ls-prompt-label">この手話をやってみよう</div>
       <div class="ls-prompt-word" id="challenge-word">—</div>
     </div>
+
+    <div class="hold-track"><div class="hold-fill" id="hold-fill"></div></div>
+    <div class="detect-bar">
+      <div class="detect-dot" id="lesson-dot"></div>
+      <div class="detect-label" id="lesson-label">手をカメラに向けてください</div>
+      <div class="detect-conf"  id="lesson-conf"></div>
+    </div>
+
+    </div><!-- /ls-body-left -->
+    <div class="ls-body-right">
 
     <!-- PC: 横並び -->
     <div class="lesson-media">
@@ -276,12 +320,7 @@
       </div>
     </div>
 
-    <div class="hold-track"><div class="hold-fill" id="hold-fill"></div></div>
-    <div class="detect-bar">
-      <div class="detect-dot" id="lesson-dot"></div>
-      <div class="detect-label" id="lesson-label">手をカメラに向けてください</div>
-      <div class="detect-conf"  id="lesson-conf"></div>
-    </div>
+    </div><!-- /ls-body-right -->
   </div>
 </div>
 
