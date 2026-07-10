@@ -258,10 +258,10 @@
       <!-- 左: お題・判定 -->
       <div class="tut-col-left">
         <div class="tut-title">手話を<br>体験してみよう</div>
-        <p class="tut-body"><span class="tut-yellow">「ありがとう」</span>の手話をやってみましょう。右手を胸の前に出して前方へ傾けます。</p>
+        <p class="tut-body"><span class="tut-yellow">「こんにちは」</span>の手話をやってみましょう。人差し指と中指を額に当て、前方へ下げます。</p>
         <div class="tut-challenge-box">
           <div class="tut-challenge-label">やってみよう</div>
-          <div class="tut-challenge-word">ありがとう</div>
+          <div class="tut-challenge-word">こんにちは</div>
         </div>
         <div class="tut-hold-track"><div class="tut-hold-fill" id="tut-hold"></div></div>
         <div class="tut-detect">
@@ -283,7 +283,7 @@
       <div class="tut-col-right">
         <div class="tut-gif-label">参考動画</div>
         <div class="tut-gif-box">
-          <img src="gifs/arigatou.gif" alt="ありがとうの手話" id="tut-gif-img"
+          <img src="konnichiwa.gif" alt="こんにちはの手話" id="tut-gif-img"
      style="width:100%;height:100%;object-fit:cover;display:block;"/>
         </div>
       </div>
@@ -485,7 +485,7 @@ async function runInfer(){
     const lg=Array.from(out.output.data);
     const mx=Math.max(...lg);const ex=lg.map(v=>Math.exp(v-mx));const sm=ex.reduce((a,b)=>a+b,0);const pb=ex.map(v=>v/sm);
     const i=pb.indexOf(Math.max(...pb));const label=labels[i],conf=pb[i];
-    const ok=label==='ありがとう'&&conf>=CONF_THRESHOLD;
+    const ok=label==='こんにちは'&&conf>=CONF_THRESHOLD;
     document.getElementById('tut-dot').className='tut-detect-dot'+(conf>=CONF_THRESHOLD?(ok?' active':' wrong'):'');
     document.getElementById('tut-label').textContent=conf>=0.35?label:'手をカメラに向けてください';
     document.getElementById('tut-conf').textContent=conf>=0.35?Math.round(conf*100)+'%':'';
