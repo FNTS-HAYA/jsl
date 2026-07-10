@@ -24,7 +24,7 @@
 
     /* ===== マップ ===== */
     .map-wrap {
-      max-width: 400px; margin: 0 auto;
+      max-width: 900px; margin: 0 auto;
       padding: 24px 20px 80px;
       display: flex; flex-direction: column; align-items: center;
     }
@@ -65,8 +65,25 @@
     .map-label-badge.locked-badge  { background: #F0F0F0; color: var(--ink-3); border-color: var(--line); }
     .map-label-badge.cleared-badge { background: var(--green-l); color: var(--green-d); border-color: var(--green); }
 
+    /* ===== PCマップ: 2カラム ===== */
+    @media (min-width: 700px) {
+      #level-map {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        width: 100%;
+      }
+      .map-node-wrap { width: 100%; }
+      .map-connector { display: none; }
+      .map-node { flex-direction: row !important; }
+      .map-circle { width: 80px; height: 80px; font-size: 32px; }
+      .map-label { padding: 16px 20px; }
+      .map-label-title { font-size: 17px; }
+      .map-wrap { max-width: 900px; }
+    }
+
     /* ===== 図鑑 ===== */
-    .dict-wrap { max-width: 600px; margin: 0 auto; padding: 24px 16px 60px; }
+    .dict-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
     .dict-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
     .dict-tab {
       padding: 7px 14px; border-radius: 99px;
@@ -77,7 +94,7 @@
     .dict-tab.active { background: var(--yellow); border-color: var(--yellow-d); color: var(--ink); }
     .dict-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
       gap: 12px;
     }
     .dict-card {
@@ -137,6 +154,22 @@
     }
 
     /* ===== レッスン画面 ===== */
+    @media (min-width: 700px) {
+      .ls-body {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 32px;
+      }
+      .ls-body-left {
+        flex: 1;
+        display: flex; flex-direction: column; gap: 14px;
+      }
+      .ls-body-right {
+        flex: 1;
+        display: flex; flex-direction: column; gap: 14px;
+      }
+      .ls-prompt-word { font-size: 56px; }
+    }
     /* PC: 参考動画とカメラを横並び */
     .lesson-media {
       display: flex; gap: 12px; width: 100%;
@@ -171,9 +204,43 @@
     /* ページコンテンツ切り替え */
     .page-content { display: none; }
     .page-content.active { display: block; }
+
+    /* ===== データ収集同意バナー ===== */
+    .consent-banner {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: #1A1A1A; border-top: 1px solid #2A2A2A;
+      padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 10px;
+      transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .consent-banner.show { transform: translateY(0); }
+    .consent-banner.hidden-banner { display: none; }
+    .consent-title { font-size: 14px; font-weight: 700; color: white; }
+    .consent-body  { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+    .consent-btns  { display: flex; gap: 10px; }
+    .consent-agree {
+      flex: 1; padding: 11px; background: var(--yellow); color: var(--ink);
+      border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700;
+      cursor: pointer;
+    }
+    .consent-deny {
+      padding: 11px 20px; background: none; color: rgba(255,255,255,0.4);
+      border: 1px solid #333; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+
+<!-- データ収集同意バナー -->
+<div class="consent-banner" id="consent-banner">
+  <div class="consent-title">🤝 データ収集にご協力ください</div>
+  <div class="consent-body">学習中の手話データを匿名で収集し、モデル改善に使用します。<br>個人情報は一切含まれません。いつでも設定から変更できます。</div>
+  <div class="consent-btns">
+    <button class="consent-agree" id="consent-agree-btn">協力する</button>
+    <button class="consent-deny"  id="consent-deny-btn">しない</button>
+  </div>
+</div>
 
 <div class="loading-overlay" id="loading">
   <div class="loading-spinner"></div>
@@ -231,12 +298,23 @@
     <div class="ls-phase-label" id="ls-phase-label">学習</div>
   </div>
   <div class="ls-body">
+    <div class="ls-body-left">
 
     <!-- お題 -->
     <div class="ls-prompt">
       <div class="ls-prompt-label" id="ls-prompt-label">この手話をやってみよう</div>
       <div class="ls-prompt-word" id="challenge-word">—</div>
     </div>
+
+    <div class="hold-track"><div class="hold-fill" id="hold-fill"></div></div>
+    <div class="detect-bar">
+      <div class="detect-dot" id="lesson-dot"></div>
+      <div class="detect-label" id="lesson-label">手をカメラに向けてください</div>
+      <div class="detect-conf"  id="lesson-conf"></div>
+    </div>
+
+    </div><!-- /ls-body-left -->
+    <div class="ls-body-right">
 
     <!-- PC: 横並び -->
     <div class="lesson-media">
@@ -276,12 +354,7 @@
       </div>
     </div>
 
-    <div class="hold-track"><div class="hold-fill" id="hold-fill"></div></div>
-    <div class="detect-bar">
-      <div class="detect-dot" id="lesson-dot"></div>
-      <div class="detect-label" id="lesson-label">手をカメラに向けてください</div>
-      <div class="detect-conf"  id="lesson-conf"></div>
-    </div>
+    </div><!-- /ls-body-right -->
   </div>
 </div>
 
@@ -310,6 +383,7 @@
   <button class="feedback-btn" id="fb-btn">つぎへ</button>
 </div>
 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
@@ -578,7 +652,11 @@ async function runInfer(){
     document.getElementById('lesson-label').textContent=conf>=0.35?label:'手をカメラに向けてください';
     document.getElementById('lesson-conf').textContent=conf>=0.35?Math.round(conf*100)+'%':'';
     document.getElementById('hold-fill').style.width=(holdCount/HOLD_FRAMES*100)+'%';
-    if(ok){holdCount++;if(holdCount>=HOLD_FRAMES){answered=true;correctCount++;showFeedback(true);}}
+    if(ok){holdCount++;if(holdCount>=HOLD_FRAMES){
+      answered=true;correctCount++;showFeedback(true);
+      // 正解サンプルをDriveに送信
+      uploadToDrive(currentChallenge, [...frameBuffer]);
+    }}
     else holdCount=0;
   }catch(e){console.error(e);}
   inferring=false;
@@ -695,6 +773,89 @@ document.getElementById('complete-back-btn').addEventListener('click',e=>{
 });
 
 init();
+
+// ===== データ収集設定 =====
+const CLIENT_ID   = '464113009637-0f2l188sn3poh4cahp6n8kk1kfgl39ss.apps.googleusercontent.com';
+const FOLDER_ID   = '1yqW3nGPTje6UKJfHHVI1BZlMDCmuZWBY';
+const CONSENT_KEY = 'handit_data_consent';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
+let accessToken  = null;
+let dataConsent  = localStorage.getItem(CONSENT_KEY); // 'agree' | 'deny' | null
+
+// 同意バナー表示
+function initConsent() {
+  if (dataConsent !== null) return; // 既に選択済み
+  setTimeout(() => {
+    document.getElementById('consent-banner').classList.add('show');
+  }, 2000);
+}
+
+document.getElementById('consent-agree-btn').addEventListener('click', async () => {
+  localStorage.setItem(CONSENT_KEY, 'agree');
+  dataConsent = 'agree';
+  document.getElementById('consent-banner').classList.remove('show');
+  await signInGoogle();
+});
+
+document.getElementById('consent-deny-btn').addEventListener('click', () => {
+  localStorage.setItem(CONSENT_KEY, 'deny');
+  dataConsent = 'deny';
+  document.getElementById('consent-banner').classList.remove('show');
+});
+
+// Google OAuth サインイン
+async function signInGoogle() {
+  return new Promise((resolve) => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: (resp) => {
+        if (resp.access_token) {
+          accessToken = resp.access_token;
+          console.log('Google Drive連携完了');
+        }
+        resolve();
+      },
+    });
+    client.requestAccessToken({ prompt: 'consent' });
+  });
+}
+
+// Google Driveにアップロード
+async function uploadToDrive(label, frameData) {
+  if (dataConsent !== 'agree') return;
+  if (!accessToken) {
+    await signInGoogle();
+    if (!accessToken) return;
+  }
+  try {
+    const data = {
+      label,
+      frameCount: frameData.length,
+      frames: frameData,
+      timestamp: Date.now(),
+      userAgent: navigator.userAgent.substring(0, 50),
+    };
+    const blob     = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const filename = `sample_${label}_${Date.now()}.json`;
+    const metadata = { name: filename, parents: [FOLDER_ID] };
+    const form     = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', blob);
+    const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: form,
+    });
+    if (resp.ok) console.log(`サンプル送信: ${filename}`);
+  } catch(e) {
+    console.error('Drive upload error:', e);
+    accessToken = null; // トークンリセット
+  }
+}
+
+initConsent();
 </script>
 </body>
 </html>
