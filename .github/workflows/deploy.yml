@@ -3,6 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [version-0.2]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -34,9 +35,11 @@ jobs:
         uses: actions/configure-pages@v3
 
       - name: Upload artifact for GitHub Pages
-        uses: actions/upload-pages-artifact@v1
+        # updated to a newer stable version to avoid deprecated internal dependencies
+        uses: actions/upload-pages-artifact@v2
         with:
           path: .
 
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v1
+        # updated to latest stable tag
+        uses: actions/deploy-pages@v2
