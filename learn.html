@@ -10,25 +10,31 @@
   <style>
     /* ===== ページタブ ===== */
     .page-tabs {
-      display: flex; border-bottom: 2px solid var(--line);
-      background: var(--white); position: sticky; top: 52px; z-index: 40;
+      display: flex; gap: 4px; border-bottom: 1px solid var(--line);
+      background: rgba(250,250,250,0.9); backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: sticky; top: 52px; z-index: 40;
+      padding: 8px 12px 0;
     }
     .page-tab {
-      flex: 1; padding: 14px; text-align: center;
+      flex: 1; padding: 12px; text-align: center;
       font-size: 14px; font-weight: 700; color: var(--ink-3);
       cursor: pointer; border: none; background: none;
-      border-bottom: 3px solid transparent; margin-bottom: -2px;
-      transition: color 0.15s, border-color 0.15s;
+      border-radius: 12px 12px 0 0;
+      transition: color 0.15s, background 0.15s;
     }
-    .page-tab.active { color: var(--ink); border-bottom-color: var(--yellow); }
+    .page-tab:hover { color: var(--ink-2); background: rgba(0,0,0,0.03); }
+    .page-tab.active { color: var(--ink); background: var(--white); box-shadow: 0 -2px 10px rgba(0,0,0,0.04); }
 
     /* ===== マップ ===== */
     .map-wrap {
       max-width: 900px; margin: 0 auto;
-      padding: 24px 20px 80px;
+      padding: 28px 20px 80px;
       display: flex; flex-direction: column; align-items: center;
+      background: radial-gradient(circle at 12% 0%, rgba(255,214,10,0.10), transparent 40%);
     }
-    .map-title { font-size: 20px; font-weight: 900; margin-bottom: 32px; align-self: flex-start; }
+    .map-title { font-size: 22px; font-weight: 900; margin-bottom: 4px; align-self: flex-start; }
+    .map-subtitle { font-size: 13px; color: var(--ink-3); font-weight: 600; margin-bottom: 28px; align-self: flex-start; }
     .map-node-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; }
     .map-connector { width: 4px; height: 40px; background: var(--line); border-radius: 99px; }
     .map-connector.done { background: var(--yellow); }
@@ -45,9 +51,9 @@
       position: relative; z-index: 1;
     }
     .map-node:not(.locked):hover .map-circle { transform: scale(1.08); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
-    .map-circle.available { background: var(--yellow); border-color: var(--yellow-d); }
-    .map-circle.cleared   { background: var(--green);  border-color: var(--green-d); }
-    .map-circle.locked    { background: #E0E0E0; border-color: #BDBDBD; }
+    .map-circle.available { background: linear-gradient(155deg, var(--yellow), #FFC700); border-color: var(--yellow-d); }
+    .map-circle.cleared   { background: linear-gradient(155deg, var(--green), #00AD5F);  border-color: var(--green-d); }
+    .map-circle.locked    { background: #E5E5E5; border-color: #CFCFCF; box-shadow: none; }
     .map-stars { position: absolute; top: -8px; right: -8px; font-size: 14px; z-index: 2; }
     .map-label {
       flex: 1; background: white; border: 1.5px solid var(--line);
@@ -101,9 +107,9 @@
       background: var(--white); border: 1.5px solid var(--line);
       border-radius: var(--radius); overflow: hidden;
       box-shadow: var(--shadow); cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
     }
-    .dict-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .dict-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--yellow-d); }
     .dict-thumb {
       background: #111; aspect-ratio: 4/3;
       display: flex; align-items: center; justify-content: center;
@@ -155,39 +161,66 @@
 
     /* ===== レッスン画面 ===== */
     @media (min-width: 700px) {
+      .lesson-screen {
+        max-width: 1100px;
+        padding: 0 32px 40px;
+      }
       .ls-body {
         flex-direction: row;
         align-items: flex-start;
-        gap: 32px;
+        gap: 28px;
       }
       .ls-body-left {
-        flex: 1;
+        flex: 0 0 320px;
         display: flex; flex-direction: column; gap: 14px;
       }
       .ls-body-right {
         flex: 1;
+        min-width: 0;
         display: flex; flex-direction: column; gap: 14px;
       }
-      .ls-prompt-word { font-size: 56px; }
+      .ls-prompt-word { font-size: 52px; }
     }
-    /* PC: 参考動画とカメラを横並び */
+    @media (min-width: 980px) {
+      .lesson-screen { max-width: 1280px; }
+      .ls-body-left  { flex-basis: 360px; }
+    }
+    /* PC: 参考動画とカメラを横並び（カメラを大きめに） */
     .lesson-media {
-      display: flex; gap: 12px; width: 100%;
+      display: flex; gap: 14px; width: 100%;
     }
     .lesson-media .video-space { flex: 1; aspect-ratio: 4/3; }
-    .lesson-media .camera-wrap { flex: 1; }
+    .lesson-media .camera-wrap {
+      flex: 1.5; aspect-ratio: 4/3; position: relative;
+    }
+    .lesson-media .camera-wrap::after {
+      content: '📷 カメラ';
+      position: absolute; top: 10px; left: 10px; z-index: 2;
+      font-size: 11px; font-weight: 700; color: white;
+      background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+      padding: 4px 10px; border-radius: 99px;
+    }
+    .lesson-media .video-space { position: relative; }
+    .lesson-media .video-space::after {
+      content: '🎬 お手本';
+      position: absolute; top: 10px; left: 10px; z-index: 2;
+      font-size: 11px; font-weight: 700; color: white;
+      background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+      padding: 4px 10px; border-radius: 99px;
+    }
 
     /* スマホ: タブで切り替え */
     .media-tabs {
       display: none;
       border-radius: var(--radius); overflow: hidden;
       border: 1.5px solid var(--line);
+      box-shadow: var(--shadow);
     }
     .media-tab-btns {
       display: flex; background: var(--line);
     }
     .media-tab-btn {
-      flex: 1; padding: 10px; text-align: center;
+      flex: 1; padding: 11px; text-align: center;
       font-size: 13px; font-weight: 700; color: var(--ink-3);
       cursor: pointer; border: none; background: none;
       transition: all 0.15s;
@@ -195,8 +228,10 @@
     .media-tab-btn.active { background: var(--white); color: var(--ink); }
     .media-tab-content { display: none; }
     .media-tab-content.active { display: block; }
+    /* スマホ: カメラを大きく、縦長に表示 */
+    #tab-camera .camera-wrap { aspect-ratio: 3/4; }
 
-    @media (max-width: 560px) {
+    @media (max-width: 699px) {
       .lesson-media { display: none; }
       .media-tabs   { display: block; }
     }
@@ -204,6 +239,75 @@
     /* ページコンテンツ切り替え */
     .page-content { display: none; }
     .page-content.active { display: block; }
+
+    /* ===== 認証UI ===== */
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .auth-btn {
+      font-size: 13px; font-weight: 700; color: var(--ink-2);
+      background: var(--yellow-l); border: 1.5px solid var(--yellow);
+      border-radius: 99px; padding: 6px 14px; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .auth-btn:hover { background: var(--yellow); }
+    .auth-chip { display: none; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-3); font-weight: 600; cursor: pointer; }
+    .auth-email { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .auth-email:hover { color: var(--ink); }
+    .auth-logout-btn {
+      font-size: 12px; font-weight: 700; color: var(--ink-3);
+      background: none; border: 1.5px solid var(--line); border-radius: 99px;
+      padding: 4px 10px; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    }
+    .auth-logout-btn:hover { border-color: var(--ink-3); color: var(--ink); }
+
+    /* ===== プロフィールモーダル ===== */
+    .profile-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .profile-avatar {
+      width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+      background: var(--yellow-l); border: 1.5px solid var(--yellow);
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .profile-email { font-size: 14px; font-weight: 700; color: var(--ink); word-break: break-all; }
+    .profile-stats { display: flex; gap: 12px; margin-bottom: 18px; }
+    .profile-stat {
+      flex: 1; background: var(--bg); border: 1.5px solid var(--line);
+      border-radius: 14px; padding: 14px; text-align: center;
+    }
+    .profile-stat-num { font-size: 24px; font-weight: 900; }
+    .profile-stat-label { font-size: 11px; color: var(--ink-3); font-weight: 700; margin-top: 2px; }
+    .profile-levels { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .profile-level-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; background: var(--bg); border-radius: 12px;
+      font-size: 13px; font-weight: 600; color: var(--ink-3);
+    }
+    .profile-level-row.cleared { color: var(--green-d); }
+
+    /* ===== 認証モーダル ===== */
+    .auth-modal-body { padding: 24px; }
+    .auth-tabs { display: flex; gap: 4px; margin-bottom: 18px; background: var(--bg); border-radius: 99px; padding: 4px; }
+    .auth-tab {
+      flex: 1; padding: 9px; border: none; background: none; border-radius: 99px;
+      font-size: 13px; font-weight: 700; color: var(--ink-3); cursor: pointer;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .auth-tab.active { background: var(--white); color: var(--ink); box-shadow: var(--shadow); }
+    .auth-input {
+      width: 100%; padding: 12px 14px; border: 1.5px solid var(--line);
+      border-radius: 12px; font-size: 14px; margin-bottom: 10px; font-family: inherit;
+    }
+    .auth-input:focus { outline: none; border-color: var(--yellow-d); }
+    .auth-consent {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12px; color: var(--ink-2); margin-bottom: 14px; line-height: 1.5; cursor: pointer;
+    }
+    .auth-consent input { margin-top: 2px; flex-shrink: 0; }
+    .auth-error { font-size: 12px; color: var(--red); min-height: 16px; margin-bottom: 8px; }
+    .auth-submit {
+      width: 100%; padding: 13px; background: var(--yellow); border: none;
+      border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 3px 0 var(--yellow-d); margin-bottom: 10px;
+    }
+    .auth-submit:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -228,9 +332,69 @@
   </div>
 </div>
 
+<!-- 認証モーダル -->
+<div class="dict-modal-overlay hidden" id="auth-modal">
+  <div class="dict-modal">
+    <div class="auth-modal-body">
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-authtab="login">ログイン</button>
+        <button class="auth-tab"        data-authtab="signup">新規登録</button>
+      </div>
+      <div class="auth-form" id="auth-form-login">
+        <input type="email"    class="auth-input" id="login-email"    placeholder="メールアドレス"/>
+        <input type="password" class="auth-input" id="login-password" placeholder="パスワード"/>
+        <div class="auth-error" id="login-error"></div>
+        <button class="auth-submit" id="login-submit">ログイン</button>
+      </div>
+      <div class="auth-form" id="auth-form-signup" style="display:none;">
+        <input type="email"    class="auth-input" id="signup-email"    placeholder="メールアドレス"/>
+        <input type="password" class="auth-input" id="signup-password" placeholder="パスワード（6文字以上）"/>
+        <label class="auth-consent">
+          <input type="checkbox" id="signup-consent"/>
+          <span>学習の進捗データ（XP・クリア状況）の収集・保存に同意します</span>
+        </label>
+        <div class="auth-error" id="signup-error"></div>
+        <button class="auth-submit" id="signup-submit">新規登録</button>
+      </div>
+      <button class="dict-modal-close" id="auth-modal-close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- プロフィールモーダル -->
+<div class="dict-modal-overlay hidden" id="profile-modal">
+  <div class="dict-modal">
+    <div class="auth-modal-body">
+      <div class="profile-header">
+        <div class="profile-avatar">👤</div>
+        <div class="profile-email" id="profile-email">—</div>
+      </div>
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <div class="profile-stat-num" id="profile-xp">0</div>
+          <div class="profile-stat-label">XP</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-num" id="profile-cleared-count">0</div>
+          <div class="profile-stat-label">クリア済み</div>
+        </div>
+      </div>
+      <div class="profile-levels" id="profile-levels"></div>
+      <button class="dict-modal-close" id="profile-modal-close">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <nav class="topbar">
   <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
-  <a href="index.html" class="topbar-link">← ホーム</a>
+  <div class="topbar-right">
+    <div class="auth-chip" id="auth-chip">
+      <span class="auth-email" id="auth-email"></span>
+      <button class="auth-logout-btn" id="logout-btn">ログアウト</button>
+    </div>
+    <button class="auth-btn" id="login-btn">👤 ログイン</button>
+    <a href="index.html" class="topbar-link">← ホーム</a>
+  </div>
 </nav>
 
 <!-- ページタブ -->
@@ -242,6 +406,8 @@
 <!-- ===== 学習マップ ===== -->
 <div class="page-content active" id="page-map">
   <div class="map-wrap">
+    <div class="map-title">📚 学習マップ</div>
+    <div class="map-subtitle">レベルをクリアして手話をマスターしよう</div>
     <div id="level-map"></div>
   </div>
 </div>
@@ -395,10 +561,179 @@ let learnQueue=[], reviewQueue=[], currentChallenge=null, currentIdx=0;
 let correctCount=0, answered=false, holdCount=0;
 
 // スマホ判定
-function isMobile() { return window.innerWidth <= 560; }
+function isMobile() { return window.innerWidth <= 699; }
 
 function getClearedLevels(){ return JSON.parse(localStorage.getItem('handit_cleared')||'[]'); }
 function setClearedLevel(id){ const c=getClearedLevels();if(!c.includes(id)){c.push(id);localStorage.setItem('handit_cleared',JSON.stringify(c));} }
+
+// ===== Firebase（Auth / Firestore） =====
+let fbApp=null, auth=null, db=null, currentUser=null;
+let fsDoc=null, fsGetDoc=null, fsSetDoc=null, fsServerTimestamp=null;
+let fbCreateUser=null, fbSignIn=null, fbSignOut=null;
+
+async function initFirebase(){
+  try{
+    const [appMod, authMod, fsMod, cfgMod] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"),
+      import("./firebase-config.js"),
+    ]);
+    fbApp=appMod.initializeApp(cfgMod.FIREBASE_CONFIG);
+    auth=authMod.getAuth(fbApp);
+    db=fsMod.getFirestore(fbApp);
+    fsDoc=fsMod.doc; fsGetDoc=fsMod.getDoc; fsSetDoc=fsMod.setDoc; fsServerTimestamp=fsMod.serverTimestamp;
+    fbCreateUser=(email,password)=>authMod.createUserWithEmailAndPassword(auth,email,password);
+    fbSignIn=(email,password)=>authMod.signInWithEmailAndPassword(auth,email,password);
+    fbSignOut=()=>authMod.signOut(auth);
+
+    let authInitialized=false;
+    authMod.onAuthStateChanged(auth, async (user)=>{
+      const wasInitialized=authInitialized;
+      authInitialized=true;
+      currentUser=user;
+      updateAuthUI();
+      if(user){
+        await syncFromFirestore(user);
+        if(labels.length) buildLevelList();
+      } else if(wasInitialized){
+        // 実際にログアウトした場合のみ、直前のアカウントの進捗をゲスト状態にリセットする
+        // （初回チェックで元々未ログインだっただけの場合はゲストの進捗を消さない）
+        localStorage.setItem('handit_xp','0');
+        localStorage.setItem('handit_cleared','[]');
+        if(labels.length) buildLevelList();
+      }
+    });
+  }catch(e){
+    console.error('Firebase初期化エラー:',e);
+  }
+}
+
+async function syncFromFirestore(user){
+  try{
+    const ref=fsDoc(db,'users',user.uid);
+    const snap=await fsGetDoc(ref);
+    if(snap.exists()){
+      const data=snap.data();
+      localStorage.setItem('handit_xp', String(data.xp||0));
+      localStorage.setItem('handit_cleared', JSON.stringify(data.cleared||[]));
+    } else {
+      await fsSetDoc(ref,{
+        xp:parseInt(localStorage.getItem('handit_xp')||'0'),
+        cleared:getClearedLevels(),
+        email:user.email,
+        createdAt:fsServerTimestamp(),
+        updatedAt:fsServerTimestamp()
+      });
+    }
+  }catch(e){ console.error('Firestore同期エラー:',e); }
+}
+
+function updateAuthUI(){
+  const chip=document.getElementById('auth-chip');
+  const loginBtn=document.getElementById('login-btn');
+  if(currentUser){
+    chip.style.display='flex';
+    loginBtn.style.display='none';
+    document.getElementById('auth-email').textContent=currentUser.email;
+  } else {
+    chip.style.display='none';
+    loginBtn.style.display='inline-block';
+  }
+}
+
+function authErrorMessage(e){
+  const map={
+    'auth/invalid-email':'メールアドレスの形式が正しくありません',
+    'auth/user-not-found':'アカウントが見つかりません',
+    'auth/wrong-password':'パスワードが間違っています',
+    'auth/invalid-credential':'メールアドレスまたはパスワードが正しくありません',
+    'auth/email-already-in-use':'このメールアドレスは既に登録されています',
+    'auth/weak-password':'パスワードは6文字以上にしてください',
+  };
+  return map[e&&e.code]||'エラーが発生しました。もう一度お試しください。';
+}
+
+function closeAuthModal(){
+  document.getElementById('auth-modal').classList.add('hidden');
+  ['login-email','login-password','signup-email','signup-password'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('signup-consent').checked=false;
+  document.getElementById('login-error').textContent='';
+  document.getElementById('signup-error').textContent='';
+}
+
+document.getElementById('login-btn').addEventListener('click',()=>{
+  document.getElementById('auth-modal').classList.remove('hidden');
+});
+document.getElementById('auth-modal-close').addEventListener('click', closeAuthModal);
+document.getElementById('auth-modal').addEventListener('click',function(e){
+  if(e.target===this) closeAuthModal();
+});
+document.querySelectorAll('.auth-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    const isLogin=tab.dataset.authtab==='login';
+    document.getElementById('auth-form-login').style.display=isLogin?'block':'none';
+    document.getElementById('auth-form-signup').style.display=isLogin?'none':'block';
+  });
+});
+document.getElementById('login-submit').addEventListener('click', async ()=>{
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  const errEl=document.getElementById('login-error'); errEl.textContent='';
+  if(!email||!password){ errEl.textContent='メールアドレスとパスワードを入力してください'; return; }
+  if(!auth){ errEl.textContent='読み込み中です。少し待ってからお試しください。'; return; }
+  try{ await fbSignIn(email,password); closeAuthModal(); }
+  catch(e){ errEl.textContent=authErrorMessage(e); }
+});
+document.getElementById('signup-submit').addEventListener('click', async ()=>{
+  const email=document.getElementById('signup-email').value.trim();
+  const password=document.getElementById('signup-password').value;
+  const consent=document.getElementById('signup-consent').checked;
+  const errEl=document.getElementById('signup-error'); errEl.textContent='';
+  if(!email||!password){ errEl.textContent='メールアドレスとパスワードを入力してください'; return; }
+  if(password.length<6){ errEl.textContent='パスワードは6文字以上にしてください'; return; }
+  if(!consent){ errEl.textContent='データ収集への同意が必要です'; return; }
+  if(!auth){ errEl.textContent='読み込み中です。少し待ってからお試しください。'; return; }
+  try{
+    const cred=await fbCreateUser(email,password);
+    await fsSetDoc(fsDoc(db,'users',cred.user.uid),{
+      xp:parseInt(localStorage.getItem('handit_xp')||'0'),
+      cleared:getClearedLevels(),
+      consent:{ dataCollection:true, consentedAt:fsServerTimestamp() },
+      email,
+      createdAt:fsServerTimestamp(),
+      updatedAt:fsServerTimestamp()
+    });
+    closeAuthModal();
+  }catch(e){ errEl.textContent=authErrorMessage(e); }
+});
+document.getElementById('logout-btn').addEventListener('click', async (e)=>{
+  e.stopPropagation();
+  if(fbSignOut) await fbSignOut();
+});
+
+// ===== プロフィールモーダル（XP・クリア状況） =====
+function openProfileModal(){
+  if(!currentUser) return;
+  document.getElementById('profile-email').textContent=currentUser.email;
+  document.getElementById('profile-xp').textContent=localStorage.getItem('handit_xp')||'0';
+  const cleared=getClearedLevels();
+  document.getElementById('profile-cleared-count').textContent=`${cleared.length} / ${LEVELS.length}`;
+  document.getElementById('profile-levels').innerHTML=LEVELS.map(lv=>{
+    const isCleared=cleared.includes(lv.id);
+    return `<div class="profile-level-row ${isCleared?'cleared':''}"><span>${isCleared?'✅':'⬜'}</span><span>Lv.${lv.id} ${lv.title}</span></div>`;
+  }).join('');
+  document.getElementById('profile-modal').classList.remove('hidden');
+}
+document.getElementById('auth-chip').addEventListener('click', openProfileModal);
+document.getElementById('profile-modal-close').addEventListener('click',()=>{
+  document.getElementById('profile-modal').classList.add('hidden');
+});
+document.getElementById('profile-modal').addEventListener('click',function(e){
+  if(e.target===this) this.classList.add('hidden');
+});
 
 // ===== ページタブ =====
 document.querySelectorAll('.page-tab').forEach(btn => {
@@ -698,7 +1033,17 @@ async function endLesson(){
   const xp=correctCount*10;
   if(currentLevel)setClearedLevel(currentLevel.id);
   const stored=parseInt(localStorage.getItem('handit_xp')||'0');
-  localStorage.setItem('handit_xp',stored+xp);
+  const newXp=stored+xp;
+  localStorage.setItem('handit_xp',newXp);
+  if(currentUser&&db){
+    try{
+      await fsSetDoc(fsDoc(db,'users',currentUser.uid),{
+        xp:newXp,
+        cleared:getClearedLevels(),
+        updatedAt:fsServerTimestamp()
+      },{merge:true});
+    }catch(e){ console.error('Firestore保存エラー:',e); }
+  }
   document.getElementById('c-correct').textContent=correctCount;
   document.getElementById('c-xp').textContent='+'+xp;
   document.getElementById('complete-sub').textContent=`復習テスト ${reviewQueue.length}問中${correctCount}問正解！`;
@@ -734,6 +1079,7 @@ document.getElementById('complete-back-btn').addEventListener('click',e=>{
 });
 
 init();
+initFirebase();
 </script>
 </body>
 </html>

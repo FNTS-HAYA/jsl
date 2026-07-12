@@ -1,34 +1,6 @@
 // ===================================================
-// HANDIT app.js — Transformer版
+// HANDIT app.js — 自由手話モード（free.html）専用
 // ===================================================
-// レベル・単語を追加するときはLEVELS配列だけ編集
-//
-// 動画ファイルの追加方法：
-// videosフォルダを作って mp4ファイルを置く
-// LEVELS の videos に { word: 'おはよう', src: 'videos/ohayou.mp4' } を追加
-// ===================================================
-
-const LEVELS = [
-  {
-    id: 1, title: 'あいさつ', icon: '👋', color: '#FFFBDD',
-    words: ['おはよう', 'こんにちは', 'ありがとう'],
-    videos: {
-      // 'おはよう': 'videos/ohayou.mp4',  // ← 動画を追加するときはここに書く
-      // 'こんにちは': 'videos/konnichiwa.mp4',
-      // 'ありがとう': 'videos/arigatou.mp4',
-    }
-  },
-  {
-    id: 2, title: 'きもち', icon: '❤️', color: '#FFECEC',
-    words: ['好き', '嫌い'],
-    videos: {}
-  },
-  {
-    id: 3, title: 'フレーズ', icon: '💬', color: '#E8F1FC',
-    words: ['もう一度'],
-    videos: {}
-  },
-];
 
 const MODEL_PATH     = 'dataset/model_single.onnx';
 const LABELS_PATH    = 'dataset/labels.json';
@@ -50,27 +22,9 @@ let faceMesh      = null;
 let mpCam         = null;
 let inferring     = false;
 
-// フェーズ管理
-const PHASE = { LEARN: 'learn', REVIEW: 'review' };
-let currentPhase   = PHASE.LEARN;
-let currentLevel   = null;
-let learnQueue     = [];  // 学習フェーズ（各単語1回）
-let reviewQueue    = [];  // 復習フェーズ（全単語ランダム）
-let currentChallenge = null;
-let currentIdx     = 0;
-let correctCount   = 0;
-let answered       = false;
-let holdCount      = 0;
-
 let freeHoldCount = 0;
 let lastAddedWord = null;
 let lastAddedTime = 0;
-
-function getClearedLevels() { return JSON.parse(localStorage.getItem('handit_cleared')||'[]'); }
-function setClearedLevel(id) {
-  const c=getClearedLevels();
-  if(!c.includes(id)){c.push(id);localStorage.setItem('handit_cleared',JSON.stringify(c));}
-}
 
 // ===== 初期化 =====
 async function init() {
@@ -92,36 +46,8 @@ async function init() {
   faceMesh.setOptions({maxNumFaces:1,refineLandmarks:false,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
   faceMesh.onResults(onFaceResults);
 
-  const isLearn=document.getElementById('level-list');
-  const isFree=document.getElementById('view-free');
-  if(isLearn) buildLevelList();
-  if(isFree)  startFreeMode();
+  await startFreeMode();
   hideLoading();
-}
-
-// ===== レベル一覧 =====
-function buildLevelList() {
-  const cleared=getClearedLevels();
-  const list=document.getElementById('level-list');
-  list.innerHTML='';
-  LEVELS.forEach((level,i)=>{
-    const isCleared=cleared.includes(level.id);
-    const isAvailable=i===0||cleared.includes(LEVELS[i-1].id);
-    const hasWords=level.words.every(w=>labels.includes(w));
-    const canPlay=isAvailable&&hasWords;
-    const card=document.createElement('div');
-    card.className='level-card '+(isCleared?'cleared':canPlay?'available':'locked');
-    card.innerHTML=`
-      <div class="level-num" style="${canPlay||isCleared?'background:'+level.color:''}">${level.id}</div>
-      <div class="level-info">
-        <div class="level-title">${level.icon} ${level.title}</div>
-        <div class="level-words">${level.words.join(' · ')}</div>
-      </div>
-      <div class="level-status">${isCleared?'✅':canPlay?'›':'🔒'}</div>
-    `;
-    if(canPlay) card.addEventListener('click',()=>startLesson(level));
-    list.appendChild(card);
-  });
 }
 
 // ===== カメラ =====
@@ -144,14 +70,6 @@ async function startCam(videoId, canvasId) {
   mpCam.start();
 }
 
-function stopCam(videoId) {
-  if(mpCam){mpCam.stop();mpCam=null;}
-  const v=document.getElementById(videoId);
-  if(v&&v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}
-  frameBuffer=[]; holdCount=0; freeHoldCount=0; inferring=false;
-  currentHandsData={}; currentFaceData=null;
-}
-
 // ===== MediaPipe =====
 function onFaceResults(results) {
   if(!results.multiFaceLandmarks||!results.multiFaceLandmarks.length){currentFaceData=null;return;}
@@ -160,18 +78,13 @@ function onFaceResults(results) {
 }
 
 function onHandResults(results) {
-  const isLesson=!!document.getElementById('view-lesson')?.classList.contains('active');
-  const isFree=!!document.getElementById('view-free')?.classList.contains('active');
-  if(!isLesson&&!isFree) return;
-
-  const cid=isLesson?'canvas-lesson':'canvas-free';
-  const canvas=document.getElementById(cid); if(!canvas) return;
+  const canvas=document.getElementById('canvas-free'); if(!canvas) return;
   const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
   currentHandsData={};
 
   if(!results.multiHandLandmarks||!results.multiHandLandmarks.length){
-    frameBuffer=[]; holdCount=0; freeHoldCount=0; return;
+    frameBuffer=[]; freeHoldCount=0; return;
   }
   for(let i=0;i<results.multiHandLandmarks.length;i++){
     const lm=results.multiHandLandmarks[i],side=results.multiHandedness[i].label;
@@ -191,8 +104,7 @@ function onHandResults(results) {
   if(frameBuffer.length>TARGET_FRAMES) frameBuffer.shift();
   if(frameBuffer.length<TARGET_FRAMES) return;
 
-  if(isLesson&&!answered) runLessonInfer();
-  if(isFree)              runFreeInfer();
+  runFreeInfer();
 }
 
 // ===== 特徴量 =====
@@ -241,23 +153,6 @@ async function infer() {
   }catch(e){console.error(e);return null;}
 }
 
-async function runLessonInfer() {
-  if(inferring) return;
-  inferring=true;
-  const res=await infer();
-  inferring=false;
-  if(!res) return;
-  const{label,conf}=res;
-  const ok=label===currentChallenge&&conf>=CONF_THRESHOLD;
-  document.getElementById('lesson-dot').className='detect-dot'+(conf>=CONF_THRESHOLD?(ok?' active':' wrong'):'');
-  document.getElementById('lesson-label').textContent=conf>=0.35?label:'手をカメラに向けてください';
-  document.getElementById('lesson-conf').textContent=conf>=0.35?Math.round(conf*100)+'%':'';
-  const hf=document.getElementById('hold-fill');
-  if(hf) hf.style.width=(holdCount/HOLD_FRAMES*100)+'%';
-  if(ok){holdCount++;if(holdCount>=HOLD_FRAMES){answered=true;correctCount++;showFeedback(true);}}
-  else{holdCount=0;}
-}
-
 async function runFreeInfer() {
   if(inferring) return;
   inferring=true;
@@ -280,125 +175,6 @@ async function runFreeInfer() {
   }else{freeHoldCount=0;}
 }
 
-// ===== レッスン =====
-async function startLesson(level) {
-  currentLevel  = level;
-  currentPhase  = PHASE.LEARN;
-  correctCount  = 0;
-  answered      = false;
-  holdCount     = 0;
-  learnQueue    = [...level.words];  // 各単語1回
-  reviewQueue   = [...level.words, ...level.words].sort(()=>Math.random()-0.5); // 復習は2回ランダム
-  currentIdx    = 0;
-  showView('view-lesson');
-  await startCam('video-lesson','canvas-lesson');
-  nextChallenge();
-}
-
-function nextChallenge() {
-  const queue = currentPhase===PHASE.LEARN ? learnQueue : reviewQueue;
-
-  if(currentIdx>=queue.length) {
-    if(currentPhase===PHASE.LEARN) {
-      // 学習フェーズ終了 → 復習フェーズへ
-      currentPhase=PHASE.REVIEW;
-      currentIdx=0;
-      correctCount=0;
-      document.getElementById('ls-phase-label').textContent='復習';
-      document.getElementById('ls-prompt-label').textContent='復習テスト';
-      nextChallenge();
-      return;
-    } else {
-      // 復習フェーズ終了
-      endLesson();
-      return;
-    }
-  }
-
-  currentChallenge = queue[currentIdx];
-  answered=false; holdCount=0; frameBuffer=[];
-
-  // お題更新
-  document.getElementById('challenge-word').textContent=currentChallenge;
-  document.getElementById('lesson-dot').className='detect-dot';
-  document.getElementById('lesson-label').textContent='手をカメラに向けてください';
-  document.getElementById('lesson-conf').textContent='';
-  const hf=document.getElementById('hold-fill');if(hf)hf.style.width='0%';
-
-  // プログレスバー
-  const total=currentPhase===PHASE.LEARN?learnQueue.length:reviewQueue.length;
-  const lp=document.getElementById('ls-progress');
-  if(lp)lp.style.width=(currentIdx/total*100)+'%';
-
-  // フェーズラベル
-  const pl=document.getElementById('ls-phase-label');
-  if(pl)pl.textContent=currentPhase===PHASE.LEARN?'学習':'復習';
-
-  // 参考動画
-  updateRefVideo(currentChallenge);
-
-  currentIdx++;
-}
-
-function updateRefVideo(word) {
-  const videoEl=document.getElementById('ref-video');
-  const placeholder=document.getElementById('video-placeholder');
-  if(!currentLevel||!currentLevel.videos) return;
-  const src=currentLevel.videos[word];
-  if(src){
-    videoEl.src=src;
-    videoEl.style.display='block';
-    placeholder.style.display='none';
-    videoEl.load();
-  }else{
-    videoEl.style.display='none';
-    placeholder.style.display='flex';
-  }
-}
-
-function showFeedback(correct) {
-  const fb=document.getElementById('feedback');
-  fb.className='feedback-overlay show '+(correct?'correct':'wrong');
-  document.getElementById('fb-title').textContent=correct?'正解！ 🎉':'もう一度！ 💪';
-  document.getElementById('fb-sub').textContent=correct
-    ?`「${currentChallenge}」できました！`
-    :`「${currentChallenge}」をもう一度試してみよう`;
-}
-
-async function endLesson() {
-  stopCam('video-lesson');
-  const xpGained=correctCount*10;
-  if(currentLevel) {
-    setClearedLevel(currentLevel.id);
-    const uid=localStorage.getItem('handit_uid');
-    if(uid){
-      try{
-        const{getFirestore,doc,getDoc,updateDoc,serverTimestamp}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-        const{initializeApp,getApps}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-        const apps=getApps();
-        const app=apps.length?apps[0]:initializeApp({apiKey:"AIzaSyB-YZ16629_Eadt8mu2kxtZU5ehZ9-dsGA",authDomain:"handit-a5cfa.firebaseapp.com",projectId:"handit-a5cfa",storageBucket:"handit-a5cfa.firebasestorage.app",messagingSenderId:"398275846471",appId:"1:398275846471:web:eb7571dcd1e920964d2c62"});
-        const db=getFirestore(app);
-        const ref=doc(db,'users',uid);
-        const snap=await getDoc(ref);
-        const data=snap.exists()?snap.data():{xp:0,cleared:[]};
-        const cleared=data.cleared||[];
-        if(!cleared.includes(currentLevel.id))cleared.push(currentLevel.id);
-        await updateDoc(ref,{xp:(data.xp||0)+xpGained,cleared,updatedAt:serverTimestamp()});
-        localStorage.setItem('handit_xp',(data.xp||0)+xpGained);
-        localStorage.setItem('handit_cleared',JSON.stringify(cleared));
-      }catch(e){console.error('Firestore保存エラー:',e);}
-    } else {
-      const xp=parseInt(localStorage.getItem('handit_xp')||'0');
-      localStorage.setItem('handit_xp',xp+xpGained);
-    }
-  }
-  document.getElementById('c-correct').textContent=correctCount;
-  document.getElementById('c-xp').textContent='+'+xpGained;
-  document.getElementById('complete-sub').textContent=
-    `復習テスト ${reviewQueue.length}問中${correctCount}問正解！`;
-  showView('view-complete');
-}
-
 // ===== 自由モード =====
 async function startFreeMode() {
   frameBuffer=[]; freeHoldCount=0; inferring=false;
@@ -412,31 +188,7 @@ function addWord(word) {
   el.className='sentence-word';el.textContent=word;box.appendChild(el);
 }
 
-// ===== ビュー =====
-function showView(id) {
-  const vl=document.getElementById('view-levels');
-  if(vl)vl.style.display=id==='view-levels'?'block':'none';
-  ['view-lesson','view-complete'].forEach(v=>{
-    const el=document.getElementById(v);if(el)el.classList.toggle('active',v===id);
-  });
-}
-
 // ===== イベント =====
-const bl=document.getElementById('back-lesson');
-if(bl)bl.addEventListener('click',()=>{
-  stopCam('video-lesson');
-  document.getElementById('feedback').className='feedback-overlay';
-  showView('view-levels');buildLevelList();
-});
-const fb=document.getElementById('fb-btn');
-if(fb)fb.addEventListener('click',()=>{
-  document.getElementById('feedback').className='feedback-overlay';
-  answered=false;holdCount=0;frameBuffer=[];nextChallenge();
-});
-const cb=document.getElementById('complete-back-btn');
-if(cb)cb.addEventListener('click',e=>{
-  e.preventDefault();showView('view-levels');buildLevelList();
-});
 const clr=document.getElementById('btn-clear');
 if(clr)clr.addEventListener('click',()=>{
   document.getElementById('sentence-box').innerHTML='<span class="sentence-empty">手話をすると単語が並びます</span>';
