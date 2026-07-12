@@ -35,11 +35,11 @@ jobs:
         uses: actions/configure-pages@v3
 
       - name: Upload artifact for GitHub Pages
-        # updated to a newer stable version to avoid deprecated internal dependencies
-        uses: actions/upload-pages-artifact@v2
+        # updated to newer stable version to avoid deprecated internal dependencies
+        uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
       - name: Deploy to GitHub Pages
         # updated to latest stable tag
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
