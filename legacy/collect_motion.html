@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Handit — データ収集ツール</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --green:#58CC02; --green-d:#46A302; --blue:#1CB0F6;
+      --red:#FF4B4B; --yellow:#FFD900; --purple:#CE82FF;
+      --bg:#F7F7F7; --white:#fff; --text:#3C3C3C; --muted:#AFAFAF;
+      --radius:14px;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Noto Sans JP',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    header { background:var(--white); border-bottom:2px solid #E5E5E5; padding:14px 24px; display:flex; align-items:center; gap:12px; }
+    header img { height:32px; }
+    header span { font-family:'Nunito',sans-serif; font-weight:800; font-size:16px; color:var(--muted); }
+    .container { max-width:560px; margin:0 auto; padding:24px 16px 48px; display:flex; flex-direction:column; gap:18px; }
+    .card { background:var(--white); border-radius:var(--radius); border:2px solid #E5E5E5; padding:20px; box-shadow:0 3px 0 rgba(0,0,0,0.1); }
+    label { font-weight:700; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; display:block; margin-bottom:6px; }
+    input[type=text], input[type=number], select {
+      width:100%; padding:10px 14px; border:2px solid #E5E5E5; border-radius:10px;
+      font-family:'Nunito',sans-serif; font-weight:700; font-size:16px; color:var(--text); background:var(--bg); outline:none;
+    }
+    input:focus, select:focus { border-color:var(--blue); }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+    /* 検出インジケーター */
+    .indicators { display:flex; gap:8px; padding:12px 16px 0; }
+    .badge { padding:5px 14px; border-radius:99px; font-family:'Nunito',sans-serif; font-weight:800; font-size:13px; background:#E5E5E5; color:var(--muted); transition:all 0.2s; }
+    .badge.on { color:white; }
+    .badge.on.right { background:var(--green); }
+    .badge.on.left  { background:var(--purple); }
+    .badge.on.face  { background:var(--blue); }
+
+    .camera-wrap { position:relative; border-radius:var(--radius); overflow:hidden; background:#111; aspect-ratio:4/3; }
+    #video { width:100%; height:100%; object-fit:cover; display:block; }
+    #canvas-overlay { position:absolute; top:0; left:0; width:100%; height:100%; }
+
+    .status-bar { border-radius:var(--radius); padding:16px 20px; display:flex; align-items:center; gap:14px; background:#F0F0F0; transition:background 0.3s; }
+    .status-bar.recording { background:#FFECEC; }
+    .status-bar.waiting   { background:#FFF9E0; }
+    .status-bar.done      { background:#E8F9D9; }
+    .status-dot { width:14px; height:14px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+    .status-bar.recording .status-dot { background:var(--red); animation:blink 0.6s infinite; }
+    .status-bar.waiting   .status-dot { background:var(--yellow); }
+    .status-bar.done      .status-dot { background:var(--green); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .status-text { font-family:'Nunito',sans-serif; font-weight:800; font-size:18px; }
+    .status-count { margin-left:auto; font-family:'Nunito',sans-serif; font-weight:900; font-size:22px; }
+
+    .prog-wrap { background:#E5E5E5; border-radius:99px; height:10px; overflow:hidden; }
+    .prog-bar  { height:100%; background:var(--green); border-radius:99px; transition:width 0.3s; }
+
+    .btn { width:100%; padding:16px; border:none; border-radius:var(--radius); font-family:'Nunito',sans-serif; font-weight:900; font-size:20px; cursor:pointer; transition:transform 0.1s, box-shadow 0.1s; }
+    .btn:active { transform:translateY(3px); }
+    .btn-start { background:var(--green); color:white; box-shadow:0 4px 0 var(--green-d); }
+    .btn-start:active { box-shadow:0 1px 0 var(--green-d); }
+    .btn-stop  { background:var(--red); color:white; box-shadow:0 4px 0 #CC0000; }
+    .btn-stop:active { box-shadow:0 1px 0 #CC0000; }
+    .btn-save  { background:var(--blue); color:white; box-shadow:0 4px 0 #0E9BD4; }
+    .btn-save:active { box-shadow:0 1px 0 #0E9BD4; }
+    .btn:disabled { background:#E5E5E5; color:var(--muted); box-shadow:none; cursor:not-allowed; transform:none; }
+
+    .log { background:#1a1a2e; color:#aaffaa; border-radius:var(--radius); padding:14px; font-family:monospace; font-size:13px; max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; }
+    .log-entry.ok   { color:#58CC02; }
+    .log-entry.err  { color:var(--red); }
+    .log-entry.info { color:var(--yellow); }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="handit_logo.png" alt="HANDIT!"/>
+  <span>データ収集ツール v2（手 + 顔）</span>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>単語ラベル</label>
+        <input type="text" id="label" placeholder="例：おはよう"/>
+      </div>
+      <div>
+        <label>連続サンプル数</label>
+        <input type="number" id="sample-count" value="10" min="1" max="50"/>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <label>1サンプルの録画時間</label>
+      <select id="duration">
+        <option value="2000">2秒</option>
+        <option value="3000" selected>3秒</option>
+        <option value="4000">4秒</option>
+        <option value="5000">5秒</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="indicators">
+      <div class="badge" id="badge-right">右手 🤚</div>
+      <div class="badge" id="badge-left">左手 ✋</div>
+      <div class="badge" id="badge-face">顔 👤</div>
+    </div>
+    <div class="camera-wrap">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas-overlay"></canvas>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    <div class="status-dot"></div>
+    <div class="status-text" id="status-text">スタートボタンを押してください</div>
+    <div class="status-count" id="status-count"></div>
+  </div>
+
+  <div class="prog-wrap"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
+
+  <button class="btn btn-start" id="btn-start">▶ 連続録画スタート</button>
+  <button class="btn btn-stop"  id="btn-stop"  disabled>■ 中止</button>
+  <button class="btn btn-save"  id="btn-save"  disabled>💾 保存する</button>
+
+  <div class="log" id="log"></div>
+</div>
+
+<!-- MediaPipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
+
+<script>
+// 顔の使う点のインデックス（FaceMesh 468点から6点だけ）
+var FACE_POINTS = {
+  nose:       1,    // 鼻先
+  forehead:   10,   // 額
+  chin:       152,  // 顎
+  left_eye:   33,   // 左目
+  right_eye:  263,  // 右目
+  mouth:      13    // 口
+};
+var FACE_KEYS = Object.keys(FACE_POINTS);
+
+var handsDetector = null;
+var faceMesh = null;
+var mpCamera = null;
+
+var currentHandsData = {};   // { Right: lm[], Left: lm[] }
+var currentFaceData  = null; // { nose:{x,y,z}, ... }
+
+var isRecording = false;
+var isStopped   = false;
+var currentFrames = [];
+var allSamples    = [];
+var samplesDone   = 0;
+var totalSamples  = 0;
+var startTime     = 0;
+var recordDuration = 3000;
+var recordTimer   = null;
+var waitTimer     = null;
+var WAIT_MS = 1200;
+
+// ===== ログ =====
+function log(msg, type) {
+  var el = document.getElementById('log');
+  var entry = document.createElement('div');
+  entry.className = 'log-entry ' + (type || '');
+  var now = new Date();
+  var t = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+  entry.textContent = '[' + t + '] ' + msg;
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setStatus(text, mode, count) {
+  document.getElementById('status-bar').className = 'status-bar ' + (mode || '');
+  document.getElementById('status-text').textContent = text;
+  document.getElementById('status-count').textContent = count != null ? count : '';
+}
+
+function setProgress(done, total) {
+  document.getElementById('prog-bar').style.width = (total > 0 ? (done/total*100) : 0) + '%';
+}
+
+// ===== 手のデータ変換 =====
+function extractHandData(lm) {
+  var wrist = lm[0], mcp = lm[9];
+  var dx = mcp.x-wrist.x, dy = mcp.y-wrist.y, dz = mcp.z-wrist.z;
+  var dlen = Math.sqrt(dx*dx+dy*dy+dz*dz) || 1;
+  var p0=lm[0], p1=lm[5], p2=lm[17];
+  var v1=[p1.x-p0.x,p1.y-p0.y,p1.z-p0.z], v2=[p2.x-p0.x,p2.y-p0.y,p2.z-p0.z];
+  var nx=v1[1]*v2[2]-v1[2]*v2[1], ny=v1[2]*v2[0]-v1[0]*v2[2], nz=v1[0]*v2[1]-v1[1]*v2[0];
+  var nlen=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+  return {
+    landmarks:  lm.map(function(l){ return {x:l.x, y:l.y, z:l.z}; }),
+    direction:  {x:dx/dlen, y:dy/dlen, z:dz/dlen},
+    normal:     {x:nx/nlen, y:ny/nlen, z:nz/nlen}
+  };
+}
+
+// ===== フレーム記録 =====
+function captureFrame() {
+  var frame = {
+    t:     Date.now() - startTime,
+    hands: {},
+    face:  currentFaceData ? JSON.parse(JSON.stringify(currentFaceData)) : null
+  };
+  for (var side in currentHandsData) {
+    frame.hands[side] = extractHandData(currentHandsData[side]);
+  }
+  currentFrames.push(frame);
+}
+
+// ===== MediaPipe 初期化 =====
+async function initDetectors() {
+  // Hands
+  handsDetector = new Hands({ locateFile: function(f){ return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/' + f; } });
+  handsDetector.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+  handsDetector.onResults(function(results) {
+    var canvas = document.getElementById('canvas-overlay');
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    currentHandsData = {};
+    document.getElementById('badge-right').className = 'badge';
+    document.getElementById('badge-left').className  = 'badge';
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+      for (var i = 0; i < results.multiHandLandmarks.length; i++) {
+        var lm   = results.multiHandLandmarks[i];
+        var side = results.multiHandedness[i].label;
+        currentHandsData[side] = lm;
+        var color = side === 'Right' ? '#58CC02' : '#CE82FF';
+        drawConnectors(ctx, lm, HAND_CONNECTIONS, { color:'rgba(255,255,255,0.35)', lineWidth:2 });
+        drawLandmarks(ctx, lm, { color:color, lineWidth:1, radius:3 });
+        var badgeId = side === 'Right' ? 'badge-right' : 'badge-left';
+        document.getElementById(badgeId).className = 'badge on ' + side.toLowerCase();
+      }
+    }
+
+    // 顔の点を描画
+    if (currentFaceData) {
+      for (var key in currentFaceData) {
+        var pt = currentFaceData[key];
+        var px = pt.x * canvas.width;
+        var py = pt.y * canvas.height;
+        ctx.beginPath();
+        ctx.arc(px, py, 5, 0, Math.PI*2);
+        ctx.fillStyle = '#1CB0F6';
+        ctx.fill();
+      }
+    }
+
+    if (isRecording) captureFrame();
+  });
+
+  // FaceMesh
+  faceMesh = new FaceMesh({ locateFile: function(f){ return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/' + f; } });
+  faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+  faceMesh.onResults(function(results) {
+    if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+      currentFaceData = null;
+      document.getElementById('badge-face').className = 'badge';
+      return;
+    }
+    var lm = results.multiFaceLandmarks[0];
+    var faceObj = {};
+    for (var key in FACE_POINTS) {
+      var idx = FACE_POINTS[key];
+      faceObj[key] = { x: lm[idx].x, y: lm[idx].y, z: lm[idx].z };
+    }
+    currentFaceData = faceObj;
+    document.getElementById('badge-face').className = 'badge on face';
+  });
+
+  // カメラ起動（Handsに送る、FaceMeshも同じフレームで処理）
+  var video = document.getElementById('video');
+  var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' } });
+  video.srcObject = stream;
+  await new Promise(function(r){ video.onloadedmetadata = r; });
+  var canvas = document.getElementById('canvas-overlay');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  var frameCount = 0;
+  mpCamera = new Camera(video, {
+    onFrame: async function() {
+      frameCount++;
+      await handsDetector.send({ image: video });
+      // FaceMeshは2フレームに1回（負荷軽減）
+      if (frameCount % 2 === 0) await faceMesh.send({ image: video });
+    },
+    width: 640, height: 480
+  });
+  mpCamera.start();
+  log('カメラ起動完了（手 + 顔モード）', 'ok');
+}
+
+// ===== 録画制御 =====
+function startRecording() {
+  if (isStopped) return;
+  isRecording   = true;
+  currentFrames = [];
+  startTime     = Date.now();
+  setStatus('録画中... ' + (samplesDone+1) + '/' + totalSamples, 'recording', '🔴 REC');
+  log('録画開始 ' + (samplesDone+1) + '/' + totalSamples, 'info');
+
+  recordTimer = setTimeout(function() {
+    isRecording = false;
+    var label = document.getElementById('label').value.trim();
+    var validFrames = currentFrames.filter(function(f){ return Object.keys(f.hands).length > 0; });
+
+    if (validFrames.length > 10) {
+      allSamples.push({ label: label, frameCount: currentFrames.length, frames: currentFrames });
+      samplesDone++;
+      setProgress(samplesDone, totalSamples);
+      var hasFace = currentFrames.filter(function(f){ return f.face !== null; }).length;
+      log('✓ サンプル' + samplesDone + '完了 (' + currentFrames.length + 'フレーム, 顔検出:' + hasFace + 'f)', 'ok');
+    } else {
+      log('✗ 手が検出されませんでした（スキップ）', 'err');
+    }
+
+    if (samplesDone >= totalSamples || isStopped) {
+      finishSession();
+    } else {
+      setStatus('次まで待機中...', 'waiting', '');
+      waitTimer = setTimeout(startRecording, WAIT_MS);
+    }
+  }, recordDuration);
+}
+
+function finishSession() {
+  isRecording = false;
+  isStopped   = true;
+  setStatus('完了！ ' + samplesDone + 'サンプル収集しました', 'done', '✅');
+  setProgress(samplesDone, totalSamples);
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').disabled  = true;
+  if (allSamples.length > 0) document.getElementById('btn-save').disabled = false;
+  log('収集完了！合計 ' + samplesDone + 'サンプル', 'ok');
+}
+
+document.getElementById('btn-start').addEventListener('click', function() {
+  var label = document.getElementById('label').value.trim();
+  if (!label) { alert('単語ラベルを入力してください'); return; }
+  totalSamples   = parseInt(document.getElementById('sample-count').value) || 10;
+  recordDuration = parseInt(document.getElementById('duration').value) || 3000;
+  samplesDone    = 0;
+  allSamples     = [];
+  isStopped      = false;
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-stop').disabled  = false;
+  document.getElementById('btn-save').disabled  = true;
+  setProgress(0, totalSamples);
+  log('「' + label + '」を' + totalSamples + 'サンプル収集開始', 'info');
+  startRecording();
+});
+
+document.getElementById('btn-stop').addEventListener('click', function() {
+  isStopped   = true;
+  isRecording = false;
+  clearTimeout(recordTimer);
+  clearTimeout(waitTimer);
+  finishSession();
+});
+
+document.getElementById('btn-save').addEventListener('click', function() {
+  var label = document.getElementById('label').value.trim();
+  var data  = { label: label, version: 2, samples: allSamples };
+  var blob  = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  var url   = URL.createObjectURL(blob);
+  var a     = document.createElement('a');
+  a.href     = url;
+  a.download = 'motion_v2_' + label + '_' + Date.now() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  log('保存しました: ' + a.download, 'ok');
+});
+
+initDetectors();
+</script>
+</body>
+</html>

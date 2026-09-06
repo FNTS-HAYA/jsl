@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// ===================================================
+// HANDIT — Firestore セキュリティルール
+//
+// Firebase コンソール → Firestore Database → ルール に貼って「公開」。
+// テストモードの「30日で期限切れ」はこれで置き換わる。
+//
+// 方針
+//   ・単語一覧とプロトタイプは、ログインしていなくても誰でも読める
+//     （学習ページはログイン不要で使えるため）
+//   ・書けるのは admins に登録された人だけ ＝ 自分だけ
+//   ・収録した生データは誰からも読めない（学習は管理者権限のサーバー側で行う）
+// ===================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // admins コレクションに自分の uid のドキュメントがあれば管理者
+    function isAdmin() {
+      return signedIn()
+             && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function validUser(d) {
+      return d.xp is number
+             && d.xp >= 0
+             && d.xp < 10000000
+             && d.cleared is list
+             && d.cleared.size() < 500;
+    }
+
+    // ---- 管理者の名簿 ----
+    // 追加はコンソールから手で行う。クライアントからは変更できない。
+    match /admins/{uid} {
+      allow read:  if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---- 全ユーザーが読む共有データ ----
+    //   shared/catalog    … 単語の一覧
+    //   shared/prototypes … 即席登録した単語の埋め込み
+    match /shared/{docId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    // ---- 収録した生データ ----
+    // 書き込みは管理者のみ。読み出しはクライアントからは一切できない。
+    // 学習は GitHub Actions がサービスアカウントで読むので、この制限を受けない。
+    match /contributions/{docId} {
+      allow create: if isAdmin()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.consent == true
+                    && request.resource.data.word is string
+                    && request.resource.data.word.size() > 0
+                    && request.resource.data.word.size() < 60
+                    && request.resource.data.dim == 168
+                    && request.resource.data.frames == 64;
+      allow read, update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ---- 学習の進捗（本人のみ） ----
+    match /users/{uid} {
+      allow read:   if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid && validUser(request.resource.data);
+      allow update: if signedIn() && request.auth.uid == uid && validUser(request.resource.data);
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ---- それ以外はすべて拒否 ----
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

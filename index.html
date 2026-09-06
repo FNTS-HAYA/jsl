@@ -1,387 +1,661 @@
-// trigger redeploy
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<<<<<<< HEAD
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HANDIT! — 日本手話学習アプリ</title>
+  <title>HANDIT!</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
   <style>
-    :root {
-      --yellow: #FFD60A;
-      --yellow-d: #C8A800;
-      --ink: #0F0F0F;
-      --ink-2: #3C3C3C;
-      --ink-3: #8A8A8A;
-      --line: #E8E8E8;
-      --bg: #FFFFFF;
-      --green: #00C46A;
-      --radius: 20px;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Noto Sans JP', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ===== NAV ===== */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      height: 52px;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px;
-      background: rgba(255,255,255,0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-      transition: background 0.3s;
-    }
-    .nav-logo { height: 24px; }
-    .nav-btn {
-      background: var(--ink); color: white; border: none;
-      border-radius: 99px; padding: 8px 18px;
-      font-size: 13px; font-weight: 700; cursor: pointer;
-      text-decoration: none;
-      transition: opacity 0.15s;
-    }
-    .nav-btn:hover { opacity: 0.8; }
-
-    /* ===== SECTIONS ===== */
-    section {
-      min-height: 100vh;
-      display: flex; flex-direction: column;
+    .home-wrap {
+      min-height: 100vh; display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      padding: 100px 24px 80px;
-      text-align: center;
+      padding: 40px 24px; gap: 32px;
     }
-
-    /* ===== HERO ===== */
-    .hero {
-      background: #FAFAFA;
-      position: relative; overflow: hidden;
-    }
-    .hero-bg {
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,214,10,0.18) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .hero-eyebrow {
-      font-size: 12px; font-weight: 700; letter-spacing: 0.15em;
-      text-transform: uppercase; color: var(--ink-3);
-      margin-bottom: 20px;
-      opacity: 0; transform: translateY(20px);
-      animation: fadeUp 0.8s ease 0.2s forwards;
-    }
-    .hero-logo {
-      width: min(320px, 72vw);
-      opacity: 0; transform: translateY(30px);
-      animation: fadeUp 0.8s ease 0.4s forwards;
-    }
-    .hero-tagline {
-      margin-top: 24px;
-      font-size: clamp(16px, 3vw, 22px);
-      font-weight: 500; color: var(--ink-2); line-height: 1.7;
-      max-width: 480px;
-      opacity: 0; transform: translateY(30px);
-      animation: fadeUp 0.8s ease 0.6s forwards;
-    }
-    .hero-cta-wrap {
-      margin-top: 36px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
-      opacity: 0; transform: translateY(30px);
-      animation: fadeUp 0.8s ease 0.8s forwards;
-    }
-    .btn-primary {
-      background: var(--ink); color: white; border: none;
-      border-radius: 99px; padding: 16px 36px;
-      font-size: 16px; font-weight: 700; cursor: pointer;
-      text-decoration: none; display: inline-block;
+    .home-logo { width: min(280px, 70vw); }
+    .home-modes { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; }
+    .home-mode-btn {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius); padding: 20px 22px;
+      cursor: pointer; box-shadow: var(--shadow);
       transition: transform 0.15s, box-shadow 0.15s;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      text-decoration: none; color: inherit;
     }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.2); }
-    .btn-secondary {
-      background: transparent; color: var(--ink); border: 1.5px solid var(--line);
-      border-radius: 99px; padding: 16px 36px;
-      font-size: 16px; font-weight: 700; cursor: pointer;
-      text-decoration: none; display: inline-block;
-      transition: border-color 0.15s;
-    }
-    .btn-secondary:hover { border-color: var(--ink-3); }
+    .home-mode-btn:hover  { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .home-mode-btn:active { transform: translateY(0); }
+    .home-mode-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .home-mode-info { flex: 1; text-align: left; }
+    .home-mode-title { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+    .home-mode-sub   { font-size: 12px; color: var(--ink-3); }
+    .home-mode-arrow { font-size: 18px; color: var(--ink-3); }
 
-    @keyframes fadeUp {
-      to { opacity: 1; transform: translateY(0); }
-    }
+    .home-auth { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 380px; }
 
-    /* ===== SCROLL REVEAL ===== */
-    .reveal {
-      opacity: 0; transform: translateY(48px);
-      transition: opacity 0.7s ease, transform 0.7s ease;
+    /* ユーザーバー */
+    .home-user-bar {
+      width: 100%; background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius); padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow);
     }
-    .reveal.visible {
-      opacity: 1; transform: translateY(0);
+    .home-user-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--accent-l); display: flex; align-items: center;
+      justify-content: center; font-size: 18px; flex-shrink: 0; overflow: hidden;
     }
-    .reveal-delay-1 { transition-delay: 0.1s; }
-    .reveal-delay-2 { transition-delay: 0.2s; }
-    .reveal-delay-3 { transition-delay: 0.3s; }
-    .reveal-delay-4 { transition-delay: 0.4s; }
-
-    /* ===== SECTION LABEL ===== */
-    .section-eyebrow {
-      font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
-      text-transform: uppercase; color: var(--ink-3);
-      margin-bottom: 16px;
-    }
-    .section-title {
-      font-size: clamp(28px, 5vw, 48px);
-      font-weight: 900; line-height: 1.2;
-      margin-bottom: 16px;
-    }
-    .section-body {
-      font-size: clamp(15px, 2vw, 18px);
-      color: var(--ink-2); line-height: 1.75;
-      max-width: 560px;
+    .home-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .home-user-info { flex: 1; }
+    .home-user-name { font-size: 14px; font-weight: 700; }
+    .home-user-stats { display: flex; gap: 12px; margin-top: 2px; }
+    .home-user-stat  { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+    .home-logout-btn {
+      font-size: 12px; font-weight: 600; color: var(--ink-3);
+      background: none; border: 1.5px solid var(--line);
+      border-radius: 99px; padding: 5px 12px; cursor: pointer;
     }
 
-    /* ===== FEATURE ===== */
-    .feature-section { background: var(--bg); }
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px; margin-top: 48px;
-      width: 100%; max-width: 800px;
-      text-align: left;
+    /* ログインボタン */
+    .home-login-btns { display: flex; gap: 10px; width: 100%; }
+    .btn-google {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm); padding: 12px;
+      font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s;
     }
-    .feature-card {
-      background: #F5F5F7; border-radius: var(--radius);
-      padding: 28px 24px;
+    .btn-google:hover { background: var(--bg); }
+    .btn-email {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--ink); color: white; border: none;
+      border-radius: var(--radius-sm); padding: 12px;
+      font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s;
     }
-    .feature-icon  { font-size: 32px; margin-bottom: 14px; }
-    .feature-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .feature-body  { font-size: 13px; color: var(--ink-3); line-height: 1.6; }
-
-    /* ===== HOWTO ===== */
-    .howto-section { background: #F5F5F7; }
-    .howto-list {
-      margin-top: 48px; width: 100%; max-width: 560px;
-      display: flex; flex-direction: column; gap: 0;
-      text-align: left;
-    }
-    .howto-item {
-      display: flex; gap: 20px; align-items: flex-start;
-      padding: 24px 0;
-      border-bottom: 1px solid var(--line);
-    }
-    .howto-item:last-child { border-bottom: none; }
-    .howto-num {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: var(--yellow); color: var(--ink);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 900; flex-shrink: 0;
-    }
-    .howto-content strong { font-size: 16px; font-weight: 700; display: block; margin-bottom: 4px; }
-    .howto-content p { font-size: 14px; color: var(--ink-3); line-height: 1.6; }
-
-    /* ===== STATS ===== */
-    .stats-section { background: var(--ink); color: white; }
-    .stats-section .section-title { color: white; }
-    .stats-section .section-body  { color: rgba(255,255,255,0.6); }
-    .stats-grid {
-      display: flex; gap: 0;
-      margin-top: 48px; width: 100%; max-width: 560px;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: var(--radius); overflow: hidden;
-    }
-    .stat-item {
-      flex: 1; padding: 28px 16px; text-align: center;
-      border-right: 1px solid rgba(255,255,255,0.12);
-    }
-    .stat-item:last-child { border-right: none; }
-    .stat-num   { font-size: 36px; font-weight: 900; color: var(--yellow); }
-    .stat-label { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; font-weight: 600; }
-
-    /* ===== CTA SECTION ===== */
-    .cta-section { background: var(--yellow); }
-    .cta-section .section-title { color: var(--ink); }
-    .cta-section .section-body  { color: var(--ink-2); }
-    .cta-section .btn-primary { background: var(--ink); }
-    .cta-section .btn-secondary { border-color: rgba(0,0,0,0.2); color: var(--ink); }
-
-    /* ===== FOOTER ===== */
-    footer {
-      padding: 32px 24px;
-      text-align: center;
-      border-top: 1px solid var(--line);
-      display: flex; align-items: center; justify-content: center; gap: 12px;
-    }
-    footer img { height: 18px; opacity: 0.3; }
-    footer p { font-size: 12px; color: var(--ink-3); }
-
-    @media (max-width: 480px) {
-      .feature-grid { grid-template-columns: 1fr; }
-      .stats-grid { flex-direction: column; }
-      .stat-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.12); }
-      .stat-item:last-child { border-bottom: none; }
-      section { padding: 80px 20px 60px; }
-    }
+    .btn-email:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
 
-<nav>
-  <img src="handit_logo.png" alt="HANDIT!" class="nav-logo"/>
-  <a href="#" onclick="goLearn(event)" class="nav-btn">学習を始める</a>
-</nav>
+<!-- メール認証モーダル -->
+<div class="modal-overlay hidden" id="email-modal">
+  <div class="modal">
+    <div class="modal-title" id="email-modal-title">ログイン</div>
+    <div class="modal-sub"   id="email-modal-sub">メールアドレスとパスワードを入力してください</div>
+    <label class="modal-label">メールアドレス</label>
+    <input class="modal-input" type="email"    id="modal-email"    placeholder="example@email.com"/>
+    <label class="modal-label">パスワード</label>
+    <input class="modal-input" type="password" id="modal-password" placeholder="6文字以上"/>
+    <div id="modal-error" style="color:#FF3B30;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <button class="modal-submit" id="email-modal-submit">ログイン</button>
+    <button class="modal-cancel" id="email-modal-toggle" style="margin-bottom:8px;">新規登録はこちら</button>
+    <button class="modal-cancel" id="email-modal-cancel">キャンセル</button>
+  </div>
+</div>
 
-<!-- HERO -->
+<!-- ホーム -->
+<div class="home-wrap">
+  <img src="handit_logo.png" alt="HANDIT!" class="home-logo"/>
+
+  <div class="home-modes">
+    <a href="learn.html" class="home-mode-btn">
+      <div class="home-mode-icon" style="background:#E6FAF2;">📚</div>
+      <div class="home-mode-info">
+        <div class="home-mode-title">学習モード</div>
+        <div class="home-mode-sub">レベルをクリアしながら手話を学ぶ</div>
+      </div>
+      <div class="home-mode-arrow">›</div>
+    </a>
+    <a href="free.html" class="home-mode-btn">
+      <div class="home-mode-icon" style="background:#D0F0FD;">🤲</div>
+      <div class="home-mode-info">
+        <div class="home-mode-title">自由手話モード</div>
+        <div class="home-mode-sub">手話をすると文章になっていく</div>
+      </div>
+      <div class="home-mode-arrow">›</div>
+    </a>
+  </div>
+
+  <div class="home-auth">
+    <!-- ログイン済み -->
+    <div class="home-user-bar hidden" id="user-bar">
+      <div class="home-user-avatar" id="user-avatar">🤟</div>
+      <div class="home-user-info">
+        <div class="home-user-name" id="user-display-name">ユーザー</div>
+        <div class="home-user-stats">
+          <span class="home-user-stat">🔥 <span id="user-streak">0</span> 連続</span>
+          <span class="home-user-stat">⭐ <span id="user-xp">0</span> XP</span>
+        </div>
+      </div>
+      <button class="home-logout-btn" id="logout-btn">ログアウト</button>
+    </div>
+    <!-- 未ログイン -->
+    <div class="home-login-btns" id="login-btns">
+      <button class="btn-google" id="google-login-btn">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Googleでログイン
+      </button>
+      <button class="btn-email" id="email-login-btn">✉️ メールで登録</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB-YZ16629_Eadt8mu2kxtZU5ehZ9-dsGA",
+  authDomain: "handit-a5cfa.firebaseapp.com",
+  projectId: "handit-a5cfa",
+  storageBucket: "handit-a5cfa.firebasestorage.app",
+  messagingSenderId: "398275846471",
+  appId: "1:398275846471:web:eb7571dcd1e920964d2c62"
+};
+
+const app      = initializeApp(firebaseConfig);
+const auth     = getAuth(app);
+const db       = getFirestore(app);
+const provider = new GoogleAuthProvider();
+let isRegisterMode = false;
+
+// ユーザーデータをFirestoreから取得・初期化
+async function loadUserData(uid) {
+  const ref  = doc(db, 'users', uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    return snap.data();
+  } else {
+    const defaultData = { xp:0, streak:0, cleared:[], createdAt: serverTimestamp() };
+    await setDoc(ref, defaultData);
+    return defaultData;
+  }
+}
+
+// 認証状態の監視
+onAuthStateChanged(auth, async user => {
+  const userBar   = document.getElementById('user-bar');
+  const loginBtns = document.getElementById('login-btns');
+  if (user) {
+    userBar.classList.remove('hidden');
+    loginBtns.classList.add('hidden');
+    document.getElementById('user-display-name').textContent = user.displayName || user.email;
+    const avatar = document.getElementById('user-avatar');
+    if (user.photoURL) {
+      avatar.innerHTML = `<img src="${user.photoURL}" alt="avatar"/>`;
+    } else {
+      avatar.textContent = '🤟';
+    }
+    // Firestoreからデータ取得してUIに反映
+    try {
+      const data = await loadUserData(user.uid);
+      document.getElementById('user-xp').textContent     = data.xp     || 0;
+      document.getElementById('user-streak').textContent = data.streak  || 0;
+      // learn.htmlで使えるようlocalStorageにも同期
+      localStorage.setItem('handit_xp',      data.xp      || 0);
+      localStorage.setItem('handit_streak',  data.streak  || 0);
+      localStorage.setItem('handit_cleared', JSON.stringify(data.cleared || []));
+      localStorage.setItem('handit_uid',     user.uid);
+    } catch(e) { console.error('Firestore読み込みエラー:', e); }
+  } else {
+    userBar.classList.add('hidden');
+    loginBtns.classList.remove('hidden');
+    localStorage.removeItem('handit_uid');
+  }
+});
+
+// Googleログイン
+document.getElementById('google-login-btn').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); }
+});
+
+// メールモーダル
+document.getElementById('email-login-btn').addEventListener('click', () => {
+  isRegisterMode = false; updateEmailModal();
+  document.getElementById('email-modal').classList.remove('hidden');
+});
+document.getElementById('email-modal-cancel').addEventListener('click', () => {
+  document.getElementById('email-modal').classList.add('hidden'); clearError();
+});
+document.getElementById('email-modal-toggle').addEventListener('click', () => {
+  isRegisterMode = !isRegisterMode; updateEmailModal();
+});
+
+function updateEmailModal() {
+  document.getElementById('email-modal-title').textContent  = isRegisterMode ? '新規登録' : 'ログイン';
+  document.getElementById('email-modal-sub').textContent    = isRegisterMode ? 'メールアドレスとパスワードを登録してください' : 'メールアドレスとパスワードを入力してください';
+  document.getElementById('email-modal-submit').textContent = isRegisterMode ? '登録する' : 'ログイン';
+  document.getElementById('email-modal-toggle').textContent = isRegisterMode ? 'すでにアカウントをお持ちの方' : '新規登録はこちら';
+  clearError();
+}
+function clearError() { const e=document.getElementById('modal-error'); e.style.display='none'; e.textContent=''; }
+function showError(msg){ const e=document.getElementById('modal-error'); e.textContent=msg; e.style.display='block'; }
+
+document.getElementById('email-modal-submit').addEventListener('click', async () => {
+  const email    = document.getElementById('modal-email').value.trim();
+  const password = document.getElementById('modal-password').value;
+  if (!email||!password) { showError('メールとパスワードを入力してください'); return; }
+  try {
+    if (isRegisterMode) {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } else {
+      await signInWithEmailAndPassword(auth, email, password);
+    }
+    document.getElementById('email-modal').classList.add('hidden'); clearError();
+  } catch(e) {
+    const msgs = {
+      'auth/email-already-in-use': 'このメールアドレスはすでに登録されています',
+      'auth/invalid-email':        'メールアドレスの形式が正しくありません',
+      'auth/weak-password':        'パスワードは6文字以上にしてください',
+      'auth/user-not-found':       'アカウントが見つかりません',
+      'auth/wrong-password':       'パスワードが間違っています',
+      'auth/invalid-credential':   'メールアドレスまたはパスワードが間違っています',
+    };
+    showError(msgs[e.code] || 'エラーが発生しました');
+  }
+});
+
+// ログアウト
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+=======
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HANDIT! — カメラの前で日本手話を練習する</title>
+<meta name="description" content="カメラに向かって手を動かすだけで、日本手話を練習できるブラウザアプリ。AIが手の形と動きをその場で判定します。"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --yellow:  #FFD60A;
+  --yellow-d:#C8A800;
+  --ink:     #101010;
+  --ink-2:   #43433F;
+  --ink-3:   #8E8E88;
+  --rule:    #E4E2DC;
+  --paper:   #FFFFFF;
+  --panel:   #131312;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Zen Kaku Gothic New', -apple-system, 'Helvetica Neue', sans-serif;
+  background: var(--paper); color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  font-weight: 500;
+}
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--yellow-d); outline-offset: 3px; border-radius: 4px; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+@media (max-width: 640px) { .wrap { padding: 0 20px; } }
+
+/* ===== ヘッダ ===== */
+.bar {
+  position: sticky; top: 0; z-index: 60;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--rule);
+}
+.bar-in { display: flex; align-items: center; gap: 24px; height: 60px; }
+.bar-logo { height: 22px; }
+.bar-nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.bar-nav a {
+  font-size: 14px; font-weight: 700; color: var(--ink-2);
+  text-decoration: none; padding: 8px 12px; border-radius: 8px;
+}
+.bar-nav a:hover { background: #F2F1EC; color: var(--ink); }
+.bar-nav .go {
+  background: var(--ink); color: #fff; padding: 9px 18px; border-radius: 99px; margin-left: 6px;
+}
+.bar-nav .go:hover { background: #2C2C2A; color: #fff; }
+@media (max-width: 560px) { .bar-nav a:not(.go) { display: none; } }
+
+/* ===== ヒーロー ===== */
+.hero { padding: 84px 0 72px; }
+.hero-in { display: grid; grid-template-columns: 1fr 340px; gap: 64px; align-items: center; }
+@media (max-width: 860px) { .hero { padding: 48px 0 52px; } .hero-in { grid-template-columns: 1fr; gap: 36px; } }
+
+.hero h1 {
+  font-size: clamp(34px, 5.4vw, 60px);
+  font-weight: 900; line-height: 1.22; letter-spacing: -0.02em;
+}
+/* 大胆さはここ1箇所だけ: 手書きロゴに合わせた蛍光ペンの線 */
+.mark {
+  background: linear-gradient(transparent 62%, var(--yellow) 62%, var(--yellow) 94%, transparent 94%);
+  background-size: 0% 100%; background-repeat: no-repeat;
+  animation: draw 0.75s cubic-bezier(0.22,1,0.36,1) 0.55s forwards;
+}
+@keyframes draw { to { background-size: 100% 100%; } }
+
+.hero p {
+  margin-top: 22px; font-size: 17px; line-height: 1.95;
+  color: var(--ink-2); max-width: 34em;
+}
+.hero-cta { margin-top: 34px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.btn {
+  display: inline-block; text-decoration: none; cursor: pointer;
+  font-family: inherit; font-size: 16px; font-weight: 700;
+  padding: 15px 32px; border-radius: 99px; border: none;
+}
+.btn-fill { background: var(--ink); color: #fff; }
+.btn-fill:hover { background: #2C2C2A; }
+.btn-line { border: 1.5px solid var(--rule); color: var(--ink); background: none; }
+.btn-line:hover { border-color: var(--ink-3); }
+.hero-note { margin-top: 20px; font-size: 13px; color: var(--ink-3); line-height: 1.8; }
+
+/* 手話のプレビュー */
+.demo { justify-self: end; width: 100%; max-width: 340px; }
+@media (max-width: 860px) { .demo { justify-self: start; } }
+.demo-frame {
+  border: 1.5px solid var(--rule); border-radius: 20px; overflow: hidden;
+  background: var(--panel);
+}
+.demo-media { aspect-ratio: 3/4; position: relative; background: var(--panel); }
+.demo-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.demo-fallback {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; color: #4A4A46; font-size: 13px;
+}
+.demo-tag {
+  position: absolute; left: 12px; top: 12px;
+  background: rgba(0,0,0,0.55); color: #fff; backdrop-filter: blur(6px);
+  border-radius: 99px; padding: 5px 13px; font-size: 12px; font-weight: 700;
+}
+.demo-read {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; background: #1C1C1A; border-top: 1px solid #2A2A27;
+}
+.demo-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--yellow); flex-shrink: 0; }
+.demo-word { font-size: 16px; font-weight: 700; color: #fff; flex: 1; }
+.demo-pct { font-size: 13px; font-weight: 700; color: var(--yellow); }
+
+/* 64フレームのバッファ = このアプリ固有の視覚単位 */
+.strip { display: flex; gap: 2px; margin-top: 12px; height: 22px; }
+.strip i {
+  flex: 1; background: var(--rule); border-radius: 1.5px;
+  transform: scaleY(0.35); transform-origin: bottom;
+  animation: fill 0.5s ease forwards;
+}
+@keyframes fill { to { background: var(--yellow); transform: scaleY(1); } }
+.strip-label { margin-top: 8px; font-size: 11.5px; color: var(--ink-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mark { background-size: 100% 100%; animation: none; }
+  .strip i { animation: none; background: var(--yellow); transform: scaleY(1); }
+  * { transition: none !important; }
+}
+
+/* ===== 使い方 ===== */
+.band { border-top: 1px solid var(--rule); padding: 72px 0; }
+.band h2 {
+  font-size: clamp(24px, 3.4vw, 34px); font-weight: 900;
+  letter-spacing: -0.01em; line-height: 1.35;
+}
+.band-lead { margin-top: 12px; font-size: 16px; color: var(--ink-2); line-height: 1.9; max-width: 40em; }
+
+.steps { margin-top: 40px; border-top: 1px solid var(--rule); }
+.step {
+  display: grid; grid-template-columns: 52px 1fr; gap: 22px;
+  padding: 26px 0; border-bottom: 1px solid var(--rule); align-items: start;
+}
+.step-n {
+  font-size: 15px; font-weight: 900; color: var(--ink);
+  width: 34px; height: 34px; border-radius: 50%; background: var(--yellow);
+  display: flex; align-items: center; justify-content: center;
+}
+.step-t { font-size: 18px; font-weight: 700; }
+.step-b { margin-top: 6px; font-size: 15px; color: var(--ink-2); line-height: 1.85; max-width: 46em; }
+
+/* ===== しくみ ===== */
+.tech { background: var(--panel); color: #fff; padding: 76px 0; }
+.tech h2 { color: #fff; }
+.tech .band-lead { color: rgba(255,255,255,0.62); }
+
+.pipe { margin-top: 44px; display: flex; gap: 0; flex-wrap: wrap; }
+.pipe-step {
+  flex: 1; min-width: 170px; padding: 22px 22px 22px 0;
+  border-top: 2px solid #2C2C28;
+}
+.pipe-step:not(:last-child) { padding-right: 26px; }
+.pipe-step.lit { border-top-color: var(--yellow); }
+.pipe-k { font-size: 13px; font-weight: 700; color: var(--yellow); }
+.pipe-v { margin-top: 8px; font-size: 15px; font-weight: 700; color: #fff; line-height: 1.5; }
+.pipe-d { margin-top: 6px; font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.75; }
+
+.tech-notes { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 28px; }
+.tech-note-t { font-size: 15px; font-weight: 700; }
+.tech-note-b { margin-top: 7px; font-size: 14px; color: rgba(255,255,255,0.58); line-height: 1.85; }
+
+/* ===== 記録 ===== */
+.record { display: flex; gap: 0; margin-top: 36px; border-top: 1px solid var(--rule); flex-wrap: wrap; }
+.record-cell { flex: 1; min-width: 120px; padding: 24px 24px 24px 0; }
+.record-n { font-size: 42px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
+.record-l { margin-top: 8px; font-size: 13px; color: var(--ink-3); font-weight: 700; }
+
+/* ===== 入口 ===== */
+.doors { margin-top: 40px; display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 560px; }
+.door {
+  display: block; text-decoration: none;
+  border: 1.5px solid var(--rule); border-radius: 20px; padding: 28px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.door:hover { border-color: var(--ink); background: #FAFAF8; }
+.door-t { font-size: 19px; font-weight: 900; }
+.door-b { margin-top: 8px; font-size: 14.5px; color: var(--ink-2); line-height: 1.85; }
+.door-go { margin-top: 16px; font-size: 14px; font-weight: 700; color: var(--yellow-d); }
+
+/* ===== フッタ ===== */
+footer { border-top: 1px solid var(--rule); padding: 40px 0 56px; }
+.foot-in { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+footer img { height: 18px; opacity: 0.32; }
+footer p { font-size: 13px; color: var(--ink-3); line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap bar-in">
+    <img src="handit_logo.png" alt="HANDIT!" class="bar-logo"/>
+    <nav class="bar-nav">
+      <a href="dictionary.html">手話図鑑</a>
+      <a href="free.html">自由手話モード</a>
+      <a href="#" class="go" id="go-top">学習を始める</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ヒーロー -->
 <section class="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-eyebrow">日本手話学習アプリ</div>
-  <img src="handit_logo.png" alt="HANDIT!" class="hero-logo"/>
-  <p class="hero-tagline">カメラ1つで、日本手話をリアルタイムに練習。<br>AIがあなたの手話を即座に判定します。</p>
-  <div class="hero-cta-wrap">
-    <a href="#" onclick="goLearn(event)" class="btn-primary">学習を始める →</a>
-    <a href="free.html"  class="btn-secondary">自由手話モード</a>
-  </div>
-</section>
-
-<!-- FEATURES -->
-<section class="feature-section">
-  <div class="section-eyebrow reveal">特徴</div>
-  <h2 class="section-title reveal reveal-delay-1">手話学習を、<br>もっと身近に。</h2>
-  <p class="section-body reveal reveal-delay-2">特別な機材は不要。普段使いのカメラだけで、本格的な手話学習が始められます。</p>
-  <div class="feature-grid">
-    <div class="feature-card reveal reveal-delay-1">
-      <div class="feature-icon">📷</div>
-      <div class="feature-title">カメラだけでOK</div>
-      <div class="feature-body">特別なセンサーや機材は不要。普通のWebカメラやスマホで使えます。</div>
-    </div>
-    <div class="feature-card reveal reveal-delay-2">
-      <div class="feature-icon">⚡</div>
-      <div class="feature-title">リアルタイム判定</div>
-      <div class="feature-body">AIがブラウザ内で即座に認識。映像がサーバーに送られることはありません。</div>
-    </div>
-    <div class="feature-card reveal reveal-delay-3">
-      <div class="feature-icon">📚</div>
-      <div class="feature-title">レベル制学習</div>
-      <div class="feature-body">レベルをクリアしながら段階的に手話を学べます。</div>
-    </div>
-    <div class="feature-card reveal reveal-delay-4">
-      <div class="feature-icon">🔄</div>
-      <div class="feature-title">復習テスト</div>
-      <div class="feature-body">レッスン後の復習テストで定着度を確認できます。</div>
-    </div>
-  </div>
-</section>
-
-<!-- HOWTO -->
-<section class="howto-section">
-  <div class="section-eyebrow reveal">使い方</div>
-  <h2 class="section-title reveal reveal-delay-1">3ステップで<br>始められます</h2>
-  <div class="howto-list">
-    <div class="howto-item reveal reveal-delay-1">
-      <div class="howto-num">1</div>
-      <div class="howto-content">
-        <strong>レベルを選ぶ</strong>
-        <p>学習モードからレベルを選択してください。あいさつ・きもちなど単語のカテゴリ別に学べます。</p>
-      </div>
-    </div>
-    <div class="howto-item reveal reveal-delay-2">
-      <div class="howto-num">2</div>
-      <div class="howto-content">
-        <strong>参考動画を見て手話をする</strong>
-        <p>お題の手話の動きを参考動画で確認してから、カメラに向かって手話をしてください。</p>
-      </div>
-    </div>
-    <div class="howto-item reveal reveal-delay-3">
-      <div class="howto-num">3</div>
-      <div class="howto-content">
-        <strong>復習テストで確認</strong>
-        <p>全単語を学んだ後、復習テストで定着度を確認します。繰り返して覚えましょう。</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- STATS -->
-<section class="stats-section">
-  <div class="section-eyebrow reveal" style="color:rgba(255,255,255,0.4);">あなたの記録</div>
-  <h2 class="section-title reveal reveal-delay-1">学習の進捗</h2>
-  <p class="section-body reveal reveal-delay-2">続けるほど、手話が身につきます。</p>
-  <div class="stats-grid reveal reveal-delay-3">
-    <div class="stat-item">
-      <div class="stat-num" id="stat-xp">0</div>
-      <div class="stat-label">⭐ XP</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num" id="stat-cleared">0</div>
-      <div class="stat-label">✅ クリア済み</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">3</div>
-      <div class="stat-label">📖 学べる単語</div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="cta-section">
-  <h2 class="section-title reveal">さっそく<br>試してみよう</h2>
-  <p class="section-body reveal reveal-delay-1">登録不要ですぐに体験できます。</p>
-  <div class="hero-cta-wrap reveal reveal-delay-2">
-    <a href="#" onclick="goLearn(event)" class="btn-primary">学習を始める →</a>
-    <a href="free.html"  class="btn-secondary">自由手話モード</a>
-  </div>
-</section>
-
-<!-- DICTIONARY LINK -->
-<section style="min-height:auto;padding:60px 24px;background:#F5F5F7;">
-  <div style="max-width:560px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+  <div class="wrap hero-in">
     <div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#8A8A8A;margin-bottom:8px;">手話図鑑</div>
-      <div style="font-size:clamp(20px,4vw,28px);font-weight:900;margin-bottom:8px;">学んだ手話を<br>いつでも確認。</div>
-      <div style="font-size:14px;color:#3C3C3C;line-height:1.6;">カテゴリ別に整理された手話の参考動画を見ながら復習できます。</div>
+      <h1>カメラの前で手を動かすと、<br><span class="mark">日本手話が練習できる。</span></h1>
+      <p>
+        手の形と動きをAIがその場で読み取って、合っているかを返します。
+        インストールも、特別な機材も要りません。ブラウザとカメラだけ。
+      </p>
+      <div class="hero-cta">
+        <a href="#" class="btn btn-fill" id="go-hero">学習を始める</a>
+        <a href="free.html" class="btn btn-line">自由に手話をしてみる</a>
+      </div>
+      <p class="hero-note">
+        映像はあなたのブラウザの中だけで処理されます。カメラの映像がサーバーに送られることはありません。
+      </p>
     </div>
-    <a href="dictionary.html" style="background:#0F0F0F;color:white;border:none;border-radius:99px;padding:14px 28px;font-size:15px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">図鑑を見る →</a>
+
+    <div class="demo">
+      <div class="demo-frame">
+        <div class="demo-media">
+          <span class="demo-tag">お手本</span>
+          <img src="assets/konnichiwa.gif" alt="「こんにちは」の手話" id="demo-gif"
+               onerror="this.style.display='none';document.getElementById('demo-fb').style.display='flex';"/>
+          <div class="demo-fallback" id="demo-fb" style="display:none;">
+            <span style="font-size:34px;">🤟</span>
+            <span>お手本の動画を準備中</span>
+          </div>
+        </div>
+        <div class="demo-read">
+          <span class="demo-dot"></span>
+          <span class="demo-word">こんにちは</span>
+          <span class="demo-pct">94%</span>
+        </div>
+      </div>
+      <div class="strip" id="strip" aria-hidden="true"></div>
+      <div class="strip-label">直近64フレームの手の動きを見て判定しています</div>
+    </div>
+  </div>
+</section>
+
+<!-- 使い方 -->
+<section class="band">
+  <div class="wrap">
+    <h2>覚えて、やってみて、確かめる。</h2>
+    <p class="band-lead">
+      単語ごとにお手本を見て、実際に手を動かし、最後に復習テストで定着を確かめます。
+    </p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <div>
+          <div class="step-t">レベルを選ぶ</div>
+          <div class="step-b">あいさつ、きもち、会話といったまとまりで、数単語ずつ進みます。前のレベルをクリアすると次が開きます。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <div>
+          <div class="step-t">お手本を見てまねる</div>
+          <div class="step-b">お手本の動画とカメラが並んで表示されます。正しい形をしばらく保つと正解になるので、一瞬合っただけでは通りません。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <div>
+          <div class="step-t">復習テストを受ける</div>
+          <div class="step-b">お手本なしで、単語だけを見て手話をします。全部通るとレベルクリアです。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- しくみ -->
+<section class="tech">
+  <div class="wrap">
+    <h2>手の動きを、どうやって単語にしているか。</h2>
+    <p class="band-lead">
+      手話は形だけでなく、動きと顔との位置関係で意味が変わります。静止画1枚では判別できないので、時間の流れごと読み取っています。
+    </p>
+
+    <div class="pipe">
+      <div class="pipe-step lit">
+        <div class="pipe-k">01 見る</div>
+        <div class="pipe-v">両手21点 + 顔6点</div>
+        <div class="pipe-d">カメラの映像から、指の関節と顔の位置を座標として取り出します。</div>
+      </div>
+      <div class="pipe-step lit">
+        <div class="pipe-k">02 数字にする</div>
+        <div class="pipe-v">168個の数値 × 64フレーム</div>
+        <div class="pipe-d">座標に加えて、手の向き・手のひらの向き・手と顔の距離も計算し、約2秒分ためます。</div>
+      </div>
+      <div class="pipe-step lit">
+        <div class="pipe-k">03 読み取る</div>
+        <div class="pipe-v">Transformer</div>
+        <div class="pipe-d">動きの時間的なつながりを見て、どの単語かを推定します。ブラウザ上で動きます。</div>
+      </div>
+      <div class="pipe-step lit">
+        <div class="pipe-k">04 返す</div>
+        <div class="pipe-v">単語と確信度</div>
+        <div class="pipe-d">確信度が高い状態が続いたときだけ正解にします。</div>
+      </div>
+    </div>
+
+    <div class="tech-notes">
+      <div>
+        <div class="tech-note-t">右手でも左手でもいい</div>
+        <div class="tech-note-b">学習するとき、集めたデータを左右反転したものも一緒に覚えさせています。利き手がどちらでも同じように判定されます。</div>
+      </div>
+      <div>
+        <div class="tech-note-t">映像は外に出ない</div>
+        <div class="tech-note-b">AIの計算はブラウザの中で完結します。カメラの映像も座標データも、どこにも送信していません。</div>
+      </div>
+      <div>
+        <div class="tech-note-t">単語はあとから足せる</div>
+        <div class="tech-note-b">新しい手話が追加されると、次にこのページを開いたときから使えるようになります。アプリを入れ直す必要はありません。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 記録 -->
+<section class="band">
+  <div class="wrap">
+    <h2>あなたの記録</h2>
+    <div class="record">
+      <div class="record-cell">
+        <div class="record-n" id="stat-xp">0</div>
+        <div class="record-l">たまったXP</div>
+      </div>
+      <div class="record-cell">
+        <div class="record-n" id="stat-cleared">0</div>
+        <div class="record-l">クリアしたレベル</div>
+      </div>
+      <div class="record-cell">
+        <div class="record-n" id="stat-words">—</div>
+        <div class="record-l">AIが判定できる単語</div>
+      </div>
+    </div>
+
+    <div class="doors">
+      <a class="door" href="dictionary.html">
+        <div class="door-t">手話図鑑</div>
+        <div class="door-b">覚えた手話を、カテゴリ別にいつでも見返せます。動きの説明とお手本つき。</div>
+        <div class="door-go">図鑑をひらく</div>
+      </a>
+    </div>
   </div>
 </section>
 
 <footer>
-  <img src="handit_logo.png" alt="HANDIT!"/>
-  <p>© 2026 HANDIT!</p>
+  <div class="wrap foot-in">
+    <img src="handit_logo.png" alt="HANDIT!"/>
+    <p>日本手話の学習アプリ。個人研究として制作しています。<br>© 2026 HANDIT!</p>
+  </div>
 </footer>
 
-<script>
-// 進捗表示
-document.getElementById('stat-xp').textContent      = localStorage.getItem('handit_xp') || 0;
-document.getElementById('stat-cleared').textContent = JSON.parse(localStorage.getItem('handit_cleared')||'[]').length;
+<script type="module">
+// ---- 64フレームのストリップ（読み込み時に1回だけ流れる） ----
+const strip = document.getElementById('strip');
+const N = 32;                                   // 見た目の分割数（実際のバッファは64フレーム）
+for (let i = 0; i < N; i++) {
+  const c = document.createElement('i');
+  c.style.animationDelay = (0.6 + i * 0.022) + 's';
+  strip.appendChild(c);
+}
 
-// スクロールアニメーション
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-    }
-  });
-}, { threshold: 0.15 });
+// ---- 記録 ----
+document.getElementById('stat-xp').textContent = localStorage.getItem('handit_xp') || 0;
+document.getElementById('stat-cleared').textContent =
+  JSON.parse(localStorage.getItem('handit_cleared') || '[]').length;
 
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+// AIが今いくつの単語を判定できるか（学習済み + スタジオで即席登録した分）
+(async () => {
+  let trained = [];
+  try { trained = (await fetch('dataset/labels.json').then(r => r.json())).labels || []; } catch {}
+  let proto = [];
+  try { proto = Object.keys(JSON.parse(localStorage.getItem('handit_prototypes') || '{}')); } catch {}
+  const n = new Set([...trained, ...proto]).size;
+  document.getElementById('stat-words').textContent = n || '—';
+})();
 
+// ---- 初回はチュートリアルへ ----
 function goLearn(e) {
   e.preventDefault();
-  if (!localStorage.getItem('handit_tutorial_done')) {
-    window.location.href = 'tutorial.html';
-  } else {
-    window.location.href = 'learn.html';
-  }
+  location.href = localStorage.getItem('handit_tutorial_done') ? 'learn.html' : 'tutorial.html';
 }
+document.getElementById('go-top').addEventListener('click', goLearn);
+document.getElementById('go-hero').addEventListener('click', goLearn);
+>>>>>>> 0482bb5 (NEW!!!!!)
 </script>
 </body>
 </html>

@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>単語スタジオ（管理）— HANDIT!</title>
+<meta name="robots" content="noindex,nofollow"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="../style.css"/>
+<style>
+  body { font-family: 'Zen Kaku Gothic New', -apple-system, sans-serif; }
+
+  .studio { max-width: 1180px; margin: 0 auto; padding: 24px 20px 80px; }
+  .studio-head { margin-bottom: 22px; }
+  .studio-title { font-size: 24px; font-weight: 900; letter-spacing: -0.01em; }
+  .studio-lead { font-size: 14px; color: var(--ink-2); margin-top: 6px; line-height: 1.7; max-width: 62ch; }
+
+  .studio-grid { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .studio-grid { grid-template-columns: 1fr; } }
+
+  /* ---- 単語リスト ---- */
+  .panel { background: var(--white); border: 1.5px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .panel-head {
+    padding: 14px 16px; border-bottom: 1.5px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .panel-title { font-size: 14px; font-weight: 700; }
+  .panel-body { padding: 12px; }
+
+  .word-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 12px; cursor: pointer;
+    border: 1.5px solid transparent;
+  }
+  .word-row:hover { background: var(--bg); }
+  .word-row.selected { background: var(--yellow-l); border-color: var(--yellow); }
+  .word-row-main { flex: 1; min-width: 0; }
+  .word-row-name { font-size: 15px; font-weight: 700; }
+  .word-row-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .word-row-count {
+    font-size: 12px; font-weight: 700; color: var(--ink-2);
+    background: var(--bg); border: 1.5px solid var(--line);
+    border-radius: 99px; padding: 3px 9px; flex-shrink: 0;
+  }
+  .word-row-count.ready { background: var(--green-l); border-color: var(--green); color: var(--green-d); }
+
+  .status-pip { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--line); }
+  .status-pip.proto   { background: var(--yellow); }
+  .status-pip.trained { background: var(--green); }
+
+  .empty-note { padding: 28px 16px; text-align: center; font-size: 13px; color: var(--ink-3); line-height: 1.8; }
+
+  /* ---- 収録エリア ---- */
+  .rec-target {
+    background: var(--ink); color: white; border-radius: var(--radius);
+    padding: 18px 22px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  }
+  .rec-target-word { font-size: 34px; font-weight: 900; line-height: 1.1; }
+  .rec-target-note { font-size: 13px; color: rgba(255,255,255,0.6); }
+
+  .rec-stage { position: relative; margin-top: 14px; }
+  .rec-countdown {
+    position: absolute; inset: 0; z-index: 5;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,15,15,0.55); backdrop-filter: blur(3px);
+    border-radius: var(--radius);
+    font-size: 96px; font-weight: 900; color: var(--yellow);
+  }
+  .rec-countdown.on { display: flex; }
+  .rec-live {
+    position: absolute; top: 12px; left: 12px; z-index: 4;
+    display: none; align-items: center; gap: 7px;
+    background: var(--red); color: white; border-radius: 99px;
+    padding: 5px 12px; font-size: 12px; font-weight: 700;
+  }
+  .rec-live.on { display: flex; }
+  .rec-live::before { content:''; width: 8px; height: 8px; border-radius: 50%; background: white; animation: blink 0.8s steps(2,end) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .rec-meter { height: 5px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+  .rec-meter-fill { height: 100%; width: 0%; background: var(--red); border-radius: 99px; }
+
+  .rec-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+  .btn {
+    border: none; border-radius: 12px; cursor: pointer;
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    padding: 12px 22px; transition: opacity 0.15s, border-color 0.15s;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-fill  { background: var(--ink); color: white; }
+  .btn-mark  { background: var(--yellow); color: var(--ink); box-shadow: 0 3px 0 var(--yellow-d); }
+  .btn-line  { background: none; border: 1.5px solid var(--line); color: var(--ink-2); }
+  .btn-line:hover { border-color: var(--ink-3); }
+  .btn-sm    { font-size: 13px; padding: 8px 14px; }
+  .btn-danger{ background: var(--red-l); color: var(--red); }
+  .btn:focus-visible { outline: 3px solid var(--yellow-d); outline-offset: 2px; }
+
+  /* ---- テイク一覧 ---- */
+  .takes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .take-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg); border: 1.5px solid var(--line);
+    border-radius: 99px; padding: 5px 8px 5px 12px; font-size: 12px; font-weight: 600;
+  }
+  .take-chip button {
+    border: none; background: none; cursor: pointer; color: var(--ink-3);
+    font-size: 13px; line-height: 1; padding: 2px;
+  }
+  .take-chip button:hover { color: var(--red); }
+
+  /* ---- フォーム ---- */
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-2); margin-bottom: 5px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--line);
+    border-radius: 10px; font-size: 14px; font-family: inherit; background: var(--white);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--yellow-d); }
+  .field textarea { resize: vertical; min-height: 60px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 140%);
+    background: var(--ink); color: white; border-radius: 14px;
+    padding: 13px 22px; font-size: 14px; font-weight: 600; z-index: 400;
+    transition: transform 0.3s cubic-bezier(0.34,1.3,0.64,1); max-width: 90vw;
+  }
+  .toast.show { transform: translate(-50%, 0); }
+  .toast.bad { background: var(--red); }
+
+  .hint { font-size: 12px; color: var(--ink-3); line-height: 1.7; margin-top: 10px; }
+  .divider { height: 1.5px; background: var(--line); margin: 16px 0; }
+
+
+  /* ---- 反映の状態 ---- */
+  .sync-bar {
+    display: flex; align-items: center; gap: 10px; margin-top: 12px;
+    background: var(--bg); border: 1.5px solid var(--line);
+    border-radius: 12px; padding: 11px 15px; font-size: 13px; font-weight: 600; color: var(--ink-2);
+  }
+  .sync-pip { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex-shrink: 0; }
+  .sync-pip.busy { background: var(--yellow); animation: pulse 1s ease-in-out infinite; }
+  .sync-pip.ok   { background: var(--green); }
+  .sync-pip.bad  { background: var(--red); }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  /* ---- 権限が無いとき ---- */
+  .locked-note {
+    max-width: 520px; margin: 60px auto; text-align: center;
+    background: var(--white); border: 1.5px solid var(--line);
+    border-radius: var(--radius); padding: 40px 32px;
+  }
+  .locked-note h2 { font-size: 20px; font-weight: 900; margin-bottom: 10px; }
+  .locked-note p { font-size: 14px; color: var(--ink-2); line-height: 1.9; }
+
+  /* ---- クラウドの状態 ---- */
+  .cloud-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--white); border: 1.5px solid var(--line);
+    border-radius: 14px; padding: 11px 16px; margin-bottom: 18px;
+    font-size: 13px; font-weight: 600; color: var(--ink-2);
+  }
+  .cloud-pip { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-3); flex-shrink: 0; }
+  .cloud-pip.ok   { background: var(--green); }
+  .cloud-pip.warn { background: var(--yellow); }
+  .cloud-pip.bad  { background: var(--red); }
+  .train-state { font-size: 11px; font-weight: 700; color: var(--ink-3); }
+  .train-state.running { color: var(--yellow-d); }
+  .train-state.ok      { color: var(--green-d); }
+
+  /* ---- モーダル ---- */
+  .modal {
+    position: fixed; inset: 0; z-index: 200; padding: 20px;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal.hidden { display: none; }          /* インラインで display を書かないこと */
+  .modal-card { background: var(--white); border-radius: 22px; width: 100%; max-width: 420px; padding: 24px; }
+  .modal-title { font-size: 19px; font-weight: 900; margin-bottom: 16px; }
+  .modal-error { font-size: 12px; color: var(--red); min-height: 16px; margin-bottom: 8px; }
+  .modal-actions { display: flex; gap: 8px; }
+  .modal-actions .btn { flex: 1; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">読み込み中...</div>
+</div>
+
+<nav class="topbar">
+  <img src="../handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
+  <span class="topbar-link" style="cursor:default;">管理ツール</span>
+</nav>
+
+<div class="locked-note" id="locked" style="display:none;">
+  <h2>この画面は管理用です</h2>
+  <p id="locked-msg"></p>
+  <p style="margin-top:18px;"><a href="../index.html" style="font-weight:700;">HANDIT! に戻る</a></p>
+</div>
+
+<div class="studio" id="studio-main">
+  <div class="studio-head">
+    <h1 class="studio-title">単語スタジオ</h1>
+    <p class="studio-lead">
+      新しい手話をカメラで数回やるだけ。3テイク集まった時点で<strong>自動的に</strong>モデルに組み込まれ、
+      Firebaseに保存され、サイト側の学習モードと図鑑に出るようになる。ボタンを押す必要はない。
+    </p>
+  </div>
+
+  <div class="cloud-bar" id="cloud-bar">
+    <span class="cloud-pip" id="cloud-pip"></span>
+    <span id="cloud-msg">接続を確認しています…</span>
+    <button class="btn btn-line btn-sm" id="btn-settings" style="margin-left:auto;">設定</button>
+  </div>
+
+  <div class="studio-grid">
+
+    <!-- 左: 単語リスト -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">単語</span>
+          <button class="btn btn-mark btn-sm" id="btn-new">単語を追加</button>
+        </div>
+        <div class="panel-body" id="word-list"></div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel-head">
+          <span class="panel-title">学習</span>
+          <span class="train-state" id="train-state">待機中</span>
+        </div>
+        <div class="panel-body">
+          <button class="btn btn-fill btn-sm" id="btn-train" style="width:100%;">いま学習を回す</button>
+          <p class="hint">
+            ふだんは「AIに登録する」を押した時点で自動的に走る。
+            進み具合は <a id="actions-link" href="#" target="_blank" rel="noopener">GitHubのActionsタブ</a> で見られる。
+            学習が終わるとモデルが更新され、黄色の単語が緑になる。
+          </p>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel-head"><span class="panel-title">データの持ち運び</span></div>
+        <div class="panel-body">
+          <button class="btn btn-line btn-sm" id="btn-export" style="width:100%;margin-bottom:8px;">データを書き出す</button>
+          <button class="btn btn-line btn-sm" id="btn-import" style="width:100%;">データを読み込む</button>
+          <input type="file" id="file-import" accept=".json" hidden/>
+          <p class="hint">
+            書き出したファイルを <code>train.py</code> に渡すと学習できる。
+            読み込みは既存データに<strong>追加</strong>されるので、他の人が collect したデータを合流させられる。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右: 収録 -->
+    <div>
+      <div class="rec-target">
+        <span class="rec-target-word" id="target-word">単語を選ぶ</span>
+        <span class="rec-target-note" id="target-note">左のリストから単語を選ぶか、新しく追加する</span>
+      </div>
+
+      <div class="rec-stage">
+        <div class="rec-countdown" id="countdown">3</div>
+        <div class="rec-live" id="live-badge">収録中</div>
+        <div class="camera-wrap">
+          <video id="cam" autoplay playsinline muted></video>
+          <canvas id="overlay"></canvas>
+        </div>
+      </div>
+      <div class="rec-meter"><div class="rec-meter-fill" id="meter"></div></div>
+
+      <div class="detect-bar" style="margin-top:12px;">
+        <div class="detect-dot" id="hand-dot"></div>
+        <div class="detect-label" id="hand-label">カメラを起動しています</div>
+        <div class="detect-conf" id="hand-conf"></div>
+      </div>
+
+      <div class="rec-actions">
+        <button class="btn btn-mark" id="btn-record" disabled>1テイク録る</button>
+        <button class="btn btn-line" id="btn-resync" disabled>いま反映し直す</button>
+        <button class="btn btn-line" id="btn-delete" disabled>この単語を削除</button>
+      </div>
+
+      <div class="sync-bar" id="sync-bar">
+        <span class="sync-pip" id="sync-pip"></span>
+        <span id="sync-msg">単語を選ぶと収録できる</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">収録したテイク</span></div>
+        <div class="panel-body">
+          <div class="takes" id="takes"><span class="empty-note" style="padding:8px;">まだ収録していない</span></div>
+          <p class="hint">
+            右手でも左手でもいい。学習時に自動で左右反転したデータも作るので、片方だけ録れば両方に対応する。
+            ただし<strong>速さや位置を少しずつ変えて</strong>3〜8テイク録ると、他人がやっても認識されやすくなる。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 新規単語モーダル -->
+<div class="modal hidden" id="new-modal" role="dialog" aria-modal="true" aria-labelledby="new-modal-title">
+  <div class="modal-card">
+    <div class="modal-title" id="new-modal-title">新しい単語</div>
+    <div class="field"><label for="f-word">単語</label><input id="f-word" placeholder="例: おつかれさま"/></div>
+    <div class="field"><label for="f-cat">カテゴリ</label><input id="f-cat" list="cat-list" placeholder="例: あいさつ"/>
+      <datalist id="cat-list"></datalist></div>
+    <div class="field"><label for="f-level">レベル</label><input id="f-level" type="number" min="1" value="1"/></div>
+    <div class="field"><label for="f-desc">手の動かし方</label><textarea id="f-desc" placeholder="例: 右手を額から前に下ろす"></textarea></div>
+    <div class="modal-error" id="f-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-line" id="f-cancel">やめる</button>
+      <button class="btn btn-mark" id="f-save">追加する</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+  <div class="modal-card">
+    <div class="modal-title" id="settings-title">設定</div>
+    <p class="hint" style="margin-top:0;margin-bottom:14px;">
+      単語を登録したときに GitHub Actions で学習を走らせるための設定。
+      トークンは<strong>この端末にだけ</strong>保存され、リポジトリには入らない。
+    </p>
+    <div class="field">
+      <label for="s-repo">リポジトリ</label>
+      <input id="s-repo" placeholder="FNTS-HAYA/jsl"/>
+    </div>
+    <div class="field">
+      <label for="s-token">GitHubトークン</label>
+      <input id="s-token" type="password" placeholder="github_pat_..."/>
+    </div>
+    <p class="hint" style="margin-top:0;">
+      GitHub の Settings → Developer settings → Personal access tokens → Fine-grained tokens で作る。
+      対象はこのリポジトリだけ、権限は Contents の Read and write でいい。期限は短めに。
+    </p>
+    <div class="modal-error" id="s-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-line" id="s-cancel">閉じる</button>
+      <button class="btn btn-mark" id="s-save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
+
+<script type="module">
+import { buildVec, pickFacePoints, resample, FACE_KEYS, FEATURE_DIM, TARGET_FRAMES } from '../js/features.js';
+import { Recognizer } from '../js/recognizer.js';
+import HANDIT_WORDS from '../words.js';
+import { initCloud, cloudUser, cloudAdmin, cloudOnline, saveCatalog, uploadTake,
+         setGitHubToken, hasGitHubToken, getGitHubRepo, triggerTraining, actionsUrl } from '../js/cloud.js';
+
+const RECORD_MS  = 2200;   // 1テイクの長さ
+const MIN_TAKES  = 3;      // 即席登録に必要なテイク数
+const MIN_HAND_RATIO = 0.5;// 手が写っていないと失敗扱い
+
+// ===== IndexedDB =====
+const DB_NAME = 'handit-studio', STORE = 'words';
+let db = null;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(STORE, { keyPath: 'word' }); };
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+function tx(mode) { return db.transaction(STORE, mode).objectStore(STORE); }
+function dbAll() {
+  return new Promise((res, rej) => { const r = tx('readonly').getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+function dbPut(rec) {
+  return new Promise((res, rej) => { const r = tx('readwrite').put(rec); r.onsuccess = () => res(); r.onerror = () => rej(r.error); });
+}
+function dbDel(word) {
+  return new Promise((res, rej) => { const r = tx('readwrite').delete(word); r.onsuccess = () => res(); r.onerror = () => rej(r.error); });
+}
+
+// ===== 状態 =====
+let words = [];            // [{word, cat, level, desc, takes: [Float32Array]}]
+let selected = null;
+let recognizer = null;
+
+let handsDetector = null, faceMesh = null, mpCam = null;
+let currentHands = {}, currentFace = null;
+let recording = false, recBuffer = [], recHandFrames = 0;
+
+// ===== 起動 =====
+async function init() {
+  db = await openDB();
+  words = await dbAll();
+
+  setLoading('クラウドに接続中...');
+  await initCloud();
+
+  // 管理者以外はここで打ち切る
+  if (cloudOnline() && !cloudAdmin()) {
+    document.getElementById('studio-main').style.display = 'none';
+    document.getElementById('locked').style.display = 'block';
+    document.getElementById('locked-msg').textContent = cloudUser()
+      ? `${cloudUser().email} には単語を追加する権限がありません。`
+      : 'ログインしていません。管理者アカウントでログインしてから開いてください。';
+    hideLoading();
+    return;
+  }
+
+  await HANDIT_WORDS.load();
+  updateCloudBar();
+
+  // 単語一覧にあるものは、まだ収録していなくてもリストに出す
+  for (const w of HANDIT_WORDS.words) {
+    if (!words.find(x => x.word === w.word)) {
+      words.push({ word: w.word, cat: w.cat, level: w.level, desc: w.desc, takes: [], fromMaster: true });
+    }
+  }
+  renderWords();
+
+  setLoading('AIを読み込み中...');
+  recognizer = new Recognizer({ base: '../' });
+  try { await recognizer.load(); } catch (e) { console.warn(e); }
+
+  setLoading('カメラを起動中...');
+  await initDetectors();
+  await startCam();
+  hideLoading();
+  setHand('手をカメラに写してください', false);
+}
+
+function updateCloudBar() {
+  const pip = document.getElementById('cloud-pip');
+  const msg = document.getElementById('cloud-msg');
+  const user = cloudUser();
+  let cls = 'bad', text = '';
+
+  if (!cloudOnline()) {
+    text = 'クラウドに繋がっていません。収録と書き出しはできますが、他の人には反映されません。';
+  } else if (!user) {
+    cls = 'warn';
+    text = 'ログインしていません。learn.html でログインすると、追加した単語が全員に反映されます。';
+  } else if (!cloudAdmin()) {
+    cls = 'warn';
+    text = `${user.email} でログイン中。単語を追加する権限がありません。`;
+  } else {
+    cls = 'ok';
+    text = `${user.email} でログイン中。追加した単語はすぐ全員に反映されます。`;
+    if (!hasGitHubToken()) text += ' 学習の自動実行は「設定」から。';
+  }
+  pip.className = 'cloud-pip ' + cls;
+  msg.textContent = text;
+
+  const link = document.getElementById('actions-link');
+  const url = actionsUrl();
+  if (url) { link.href = url; } else { link.removeAttribute('href'); }
+  document.getElementById('btn-train').disabled = !hasGitHubToken();
+}
+
+function setLoading(t) {
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('loading-text').textContent = t;
+}
+function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
+
+// ===== MediaPipe =====
+async function initDetectors() {
+  handsDetector = new Hands({ locateFile: f => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/' + f });
+  handsDetector.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.65, minTrackingConfidence: 0.5 });
+  handsDetector.onResults(onHands);
+
+  faceMesh = new FaceMesh({ locateFile: f => 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/' + f });
+  faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+  faceMesh.onResults(r => {
+    if (!r.multiFaceLandmarks || !r.multiFaceLandmarks.length) { currentFace = null; return; }
+    currentFace = pickFacePoints(r.multiFaceLandmarks[0]);
+  });
+}
+
+async function startCam() {
+  const video  = document.getElementById('cam');
+  const canvas = document.getElementById('overlay');
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+  video.srcObject = stream;
+  await new Promise(r => video.onloadedmetadata = r);
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  let fc = 0;
+  mpCam = new Camera(video, {
+    onFrame: async () => { fc++; await handsDetector.send({ image: video }); if (fc % 2 === 0) await faceMesh.send({ image: video }); },
+    width: 640, height: 480
+  });
+  mpCam.start();
+}
+
+function onHands(r) {
+  const canvas = document.getElementById('overlay');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  currentHands = {};
+
+  const found = r.multiHandLandmarks && r.multiHandLandmarks.length;
+  if (found) {
+    for (let i = 0; i < r.multiHandLandmarks.length; i++) {
+      const lm = r.multiHandLandmarks[i], side = r.multiHandedness[i].label;
+      currentHands[side] = lm;
+      drawConnectors(ctx, lm, HAND_CONNECTIONS, { color: 'rgba(255,255,255,0.3)', lineWidth: 2 });
+      drawLandmarks(ctx, lm, { color: side === 'Right' ? '#FFD60A' : '#CE82FF', lineWidth: 1, radius: 3 });
+    }
+    if (currentFace) FACE_KEYS.forEach(k => {
+      const p = currentFace[k]; if (!p) return;
+      ctx.beginPath(); ctx.arc(p.x * canvas.width, p.y * canvas.height, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#0071E3'; ctx.fill();
+    });
+  }
+
+  if (!recording) {
+    setHand(found ? `${Object.keys(currentHands).length}本の手を認識中` : '手をカメラに写してください', !!found);
+  } else {
+    recBuffer.push(buildVec(currentHands, currentFace));
+    if (found) recHandFrames++;
+  }
+}
+
+function setHand(text, ok) {
+  document.getElementById('hand-dot').className = 'detect-dot' + (ok ? ' active' : '');
+  document.getElementById('hand-label').textContent = text;
+}
+
+// ===== 収録 =====
+async function record() {
+  if (!selected || recording) return;
+  const btn = document.getElementById('btn-record');
+  btn.disabled = true;
+
+  // カウントダウン
+  const cd = document.getElementById('countdown');
+  cd.classList.add('on');
+  for (const n of ['3', '2', '1']) { cd.textContent = n; await sleep(700); }
+  cd.classList.remove('on');
+
+  // 収録
+  recording = true; recBuffer = []; recHandFrames = 0;
+  document.getElementById('live-badge').classList.add('on');
+  const meter = document.getElementById('meter');
+  const t0 = performance.now();
+  await new Promise(res => {
+    const tick = () => {
+      const p = Math.min(1, (performance.now() - t0) / RECORD_MS);
+      meter.style.width = (p * 100) + '%';
+      if (p < 1) requestAnimationFrame(tick); else res();
+    };
+    tick();
+  });
+  recording = false;
+  document.getElementById('live-badge').classList.remove('on');
+  meter.style.width = '0%';
+  btn.disabled = false;
+
+  // 検品
+  const total = recBuffer.length;
+  if (total < 12) { toast('フレームが足りませんでした。もう一度録ってください', true); return; }
+  if (recHandFrames / total < MIN_HAND_RATIO) { toast('手がほとんど写っていません。カメラに手を入れて録り直してください', true); return; }
+
+  const seq = resample(recBuffer, TARGET_FRAMES);
+  const flat = new Float32Array(TARGET_FRAMES * FEATURE_DIM);
+  seq.forEach((f, i) => flat.set(f, i * FEATURE_DIM));
+
+  selected.takes.push(flat);
+  delete selected.fromMaster;
+  await dbPut(stripRuntime(selected));
+  renderTakes(); renderWords();
+
+  toast(`${selected.word}: ${selected.takes.length}テイク目`);
+
+  // 生データをクラウドへ（学習の材料になる）
+  if (cloudAdmin()) {
+    try { await uploadTake(selected.word, flat); }
+    catch (e) { console.warn('クラウドに送れませんでした', e); }
+  }
+
+  // 3テイク揃ったら、押さなくても勝手にモデルへ組み込む
+  autoSync(selected);
+}
+
+// ===================================================
+// 自動反映
+//
+//   録る → 生データをクラウドへ
+//        → 3テイク揃ったらモデルに組み込む（プロトタイプ）
+//        → 単語一覧に載せる（学習モードと図鑑に出る）
+//        → しばらく操作が止まったら学習を走らせる
+//
+// 学習は重いので、テイクごとには走らせずまとめて1回にする。
+// ===================================================
+const TRAIN_DEBOUNCE = 60000;   // 最後の収録から1分でまとめて学習
+let syncing = false, trainTimer = null, pendingTrain = [];
+
+function setSync(msg, cls) {
+  document.getElementById('sync-pip').className = 'sync-pip ' + (cls || '');
+  document.getElementById('sync-msg').textContent = msg;
+}
+
+async function autoSync(word) {
+  if (word.takes.length < MIN_TAKES) {
+    setSync(`あと${MIN_TAKES - word.takes.length}テイクで自動的に組み込まれる`, '');
+    return;
+  }
+  if (syncing) return;
+  syncing = true;
+  setSync('モデルに組み込んでいます…', 'busy');
+  try {
+    if (!recognizer || !recognizer.encoder) {
+      throw new Error('encoder.onnx がまだありません。一度だけ学習を回してください');
+    }
+    await recognizer.registerPrototype(word.word, word.takes.map(unflatten));
+
+    if (cloudAdmin()) {
+      const list = HANDIT_WORDS.words.filter(w => w.word !== word.word);
+      list.push({ word: word.word, cat: word.cat, level: word.level,
+                  gif: word.gif || null, desc: word.desc || '' });
+      await saveCatalog(list);
+      await HANDIT_WORDS.load();
+      setSync(`「${word.word}」を組み込んだ。サイトを開けばもう使える`, 'ok');
+    } else {
+      setSync(`「${word.word}」をこの端末に組み込んだ`, 'ok');
+    }
+    renderWords();
+    scheduleTraining(word.word);
+  } catch (e) {
+    console.error(e);
+    setSync('組み込みに失敗: ' + e.message, 'bad');
+  } finally { syncing = false; }
+}
+
+function scheduleTraining(word) {
+  if (!hasGitHubToken()) { setTrainState('未設定', ''); return; }
+  if (!pendingTrain.includes(word)) pendingTrain.push(word);
+  clearTimeout(trainTimer);
+  setTrainState(`${Math.round(TRAIN_DEBOUNCE / 1000)}秒後に学習`, 'running');
+  trainTimer = setTimeout(runTraining, TRAIN_DEBOUNCE);
+}
+
+async function runTraining() {
+  clearTimeout(trainTimer);
+  const reason = pendingTrain.length ? '登録: ' + pendingTrain.join(', ') : '手動';
+  pendingTrain = [];
+  try {
+    await triggerTraining(reason);
+    setTrainState('学習中', 'running');
+    toast('学習を開始した。数分でモデルが更新される');
+  } catch (e) {
+    console.warn(e);
+    setTrainState('起動できず', '');
+    toast('学習を起動できませんでした: ' + e.message, true);
+  }
+}
+
+// ===== 手動での反映し直し =====
+async function register() {
+  if (!selected) return;
+  if (selected.takes.length < MIN_TAKES) {
+    toast(`あと${MIN_TAKES - selected.takes.length}テイク必要`, true); return;
+  }
+  await autoSync(selected);
+}
+
+// ===== 描画 =====
+function statusOf(w) {
+  if (recognizer && recognizer.labels.includes(w.word)) return 'trained';
+  if (recognizer && recognizer.prototypes[w.word])      return 'proto';
+  return 'none';
+}
+const STATUS_TEXT = { trained: '学習済み', proto: '即席登録', none: '未登録' };
+
+function renderWords() {
+  const list = document.getElementById('word-list');
+  const dl = document.getElementById('cat-list');
+  dl.innerHTML = [...new Set(words.map(w => w.cat).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('');
+
+  if (!words.length) {
+    list.innerHTML = '<div class="empty-note">まだ単語がない。<br>「単語を追加」から始める。</div>';
+    return;
+  }
+  list.innerHTML = '';
+  words.sort((a, b) => (a.level || 99) - (b.level || 99) || a.word.localeCompare(b.word, 'ja'));
+  for (const w of words) {
+    const st = statusOf(w);
+    const n = w.takes.length;
+    const row = document.createElement('div');
+    row.className = 'word-row' + (selected && selected.word === w.word ? ' selected' : '');
+    row.innerHTML = `
+      <span class="status-pip ${st}" title="${STATUS_TEXT[st]}"></span>
+      <div class="word-row-main">
+        <div class="word-row-name">${esc(w.word)}</div>
+        <div class="word-row-meta">${esc(w.cat || '未分類')} · Lv.${w.level || '-'} · ${STATUS_TEXT[st]}</div>
+      </div>
+      <span class="word-row-count ${n >= MIN_TAKES ? 'ready' : ''}">${n}</span>`;
+    row.addEventListener('click', () => select(w));
+    list.appendChild(row);
+  }
+}
+
+function select(w) {
+  selected = w;
+  document.getElementById('target-word').textContent = w.word;
+  document.getElementById('target-note').textContent = w.desc || '説明はまだ無い';
+  document.getElementById('btn-record').disabled = false;
+  document.getElementById('btn-delete').disabled = false;
+  renderTakes(); renderWords();
+  const need = MIN_TAKES - w.takes.length;
+  setSync(need > 0 ? `あと${need}テイクで自動的に組み込まれる` : 'この単語は組み込み済み',
+          need > 0 ? '' : 'ok');
+}
+
+function renderTakes() {
+  const box = document.getElementById('takes');
+  const btnReg = document.getElementById('btn-resync');
+  if (!selected || !selected.takes.length) {
+    box.innerHTML = '<span class="empty-note" style="padding:8px;">まだ収録していない</span>';
+    btnReg.disabled = true;
+    return;
+  }
+  box.innerHTML = '';
+  selected.takes.forEach((_, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'take-chip';
+    chip.innerHTML = `テイク${i + 1}<button title="削除">✕</button>`;
+    chip.querySelector('button').addEventListener('click', async () => {
+      selected.takes.splice(i, 1);
+      await dbPut(stripRuntime(selected));
+      renderTakes(); renderWords();
+    });
+    box.appendChild(chip);
+  });
+  btnReg.disabled = selected.takes.length < MIN_TAKES;
+}
+
+// ===== 単語の追加 / 削除 =====
+document.getElementById('btn-new').addEventListener('click', () => {
+  document.getElementById('f-error').textContent = '';
+  document.getElementById('new-modal').classList.remove('hidden');
+  document.getElementById('f-word').focus();
+});
+document.getElementById('f-cancel').addEventListener('click', closeNew);
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!document.getElementById('new-modal').classList.contains('hidden')) closeNew();
+  if (!document.getElementById('settings-modal').classList.contains('hidden')) closeSettings();
+});
+document.getElementById('new-modal').addEventListener('click', e => { if (e.target.id === 'new-modal') closeNew(); });
+function closeNew() {
+  document.getElementById('new-modal').classList.add('hidden');
+  ['f-word', 'f-cat', 'f-desc'].forEach(id => document.getElementById(id).value = '');
+}
+
+document.getElementById('f-save').addEventListener('click', async () => {
+  const word  = document.getElementById('f-word').value.trim();
+  const cat   = document.getElementById('f-cat').value.trim() || '未分類';
+  const level = parseInt(document.getElementById('f-level').value) || 1;
+  const desc  = document.getElementById('f-desc').value.trim();
+  const err   = document.getElementById('f-error');
+  if (!word) { err.textContent = '単語を入力してください'; return; }
+  if (words.find(w => w.word === word)) { err.textContent = 'その単語はもうあります'; return; }
+  const rec = { word, cat, level, desc, takes: [] };
+  await dbPut(rec);
+  words.push(rec);
+  if (cloudAdmin()) {
+    try {
+      await saveCatalog([...HANDIT_WORDS.words.filter(w => w.word !== word),
+                         { word, cat, level, gif: null, desc }]);
+      await HANDIT_WORDS.load();
+    } catch (e) { console.warn('単語一覧を更新できませんでした', e); }
+  }
+  closeNew(); select(rec);
+  toast(`「${word}」を追加した。3テイク録ろう`);
+});
+
+document.getElementById('btn-delete').addEventListener('click', async () => {
+  if (!selected) return;
+  if (!confirm(`「${selected.word}」の収録データを全部消します。いいですか？`)) return;
+  await dbDel(selected.word);
+  if (recognizer) await recognizer.removePrototype(selected.word);
+  words = words.filter(w => w.word !== selected.word);
+  selected = null;
+  document.getElementById('target-word').textContent = '単語を選ぶ';
+  document.getElementById('target-note').textContent = '左のリストから単語を選ぶか、新しく追加する';
+  ['btn-record', 'btn-resync', 'btn-delete'].forEach(id => document.getElementById(id).disabled = true);
+  setSync('単語を選ぶと収録できる', '');
+  renderTakes(); renderWords();
+  toast('削除した');
+});
+
+function setTrainState(text, cls) {
+  const el = document.getElementById('train-state');
+  el.textContent = text; el.className = 'train-state ' + (cls || '');
+}
+
+document.getElementById('btn-train').addEventListener('click', runTraining);
+
+// 設定
+const sModal = document.getElementById('settings-modal');
+document.getElementById('btn-settings').addEventListener('click', () => {
+  document.getElementById('s-repo').value  = getGitHubRepo();
+  document.getElementById('s-token').value = '';
+  document.getElementById('s-error').textContent = hasGitHubToken() ? '' : '';
+  sModal.classList.remove('hidden');
+});
+function closeSettings() { sModal.classList.add('hidden'); }
+document.getElementById('s-cancel').addEventListener('click', closeSettings);
+sModal.addEventListener('click', e => { if (e.target === sModal) closeSettings(); });
+document.getElementById('s-save').addEventListener('click', () => {
+  const repo  = document.getElementById('s-repo').value.trim();
+  const token = document.getElementById('s-token').value.trim();
+  const err   = document.getElementById('s-error');
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { err.textContent = 'リポジトリは ユーザー名/リポジトリ名 の形で入れてください'; return; }
+  setGitHubToken(token || null, repo);
+  closeSettings(); updateCloudBar();
+  toast(token ? '保存した。次から登録時に学習が走る' : 'リポジトリだけ保存した');
+});
+
+document.getElementById('btn-record').addEventListener('click', record);
+document.getElementById('btn-resync').addEventListener('click', register);
+
+// ===== 書き出し / 読み込み =====
+document.getElementById('btn-export').addEventListener('click', async () => {
+  const all = (await dbAll()).filter(w => w.takes.length);
+  if (!all.length) { toast('書き出せるデータがまだない', true); return; }
+  const bundle = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    featureDim: FEATURE_DIM,
+    frames: TARGET_FRAMES,
+    words: all.map(w => ({
+      word: w.word, cat: w.cat, level: w.level, desc: w.desc,
+      samples: w.takes.map(t => Array.from(t, v => Math.round(v * 1e5) / 1e5)),
+    })),
+  };
+  const blob = new Blob([JSON.stringify(bundle)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `handit_dataset_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  const n = all.reduce((s, w) => s + w.takes.length, 0);
+  toast(`${all.length}単語 / ${n}テイクを書き出した`);
+});
+
+document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-import').click());
+document.getElementById('file-import').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const bundle = JSON.parse(await file.text());
+    if (!bundle.words) throw new Error('形式が違います');
+    if (bundle.featureDim && bundle.featureDim !== FEATURE_DIM) throw new Error('特徴量の次元が違います');
+    let added = 0;
+    for (const w of bundle.words) {
+      let rec = words.find(x => x.word === w.word);
+      if (!rec) { rec = { word: w.word, cat: w.cat || '未分類', level: w.level || 1, desc: w.desc || '', takes: [] }; words.push(rec); }
+      delete rec.fromMaster;
+      for (const s of w.samples) { rec.takes.push(Float32Array.from(s)); added++; }
+      await dbPut(stripRuntime(rec));
+    }
+    renderWords(); renderTakes();
+    toast(`${added}テイクを追加した`);
+  } catch (err) { toast('読み込めませんでした: ' + err.message, true); }
+  e.target.value = '';
+});
+
+// ===== ユーティリティ =====
+function stripRuntime(w) { return { word: w.word, cat: w.cat, level: w.level, desc: w.desc, takes: w.takes }; }
+function unflatten(flat) {
+  const out = [];
+  for (let i = 0; i < TARGET_FRAMES; i++) out.push(Array.from(flat.subarray(i * FEATURE_DIM, (i + 1) * FEATURE_DIM)));
+  return out;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+let toastTimer = null;
+function toast(msg, bad = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (bad ? ' bad' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast' + (bad ? ' bad' : ''), 3200);
+}
+
+init().catch(e => { console.error(e); setLoading('起動に失敗しました: ' + e.message); });
+</script>
+</body>
+</html>

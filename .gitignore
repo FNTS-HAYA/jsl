@@ -1,1 +1,8 @@
 firebase-config.js
+__pycache__/
+*.pyc
+dataset/checkpoint.pt.bak
+
+token
+*-firebase-adminsdk-*.json
+serviceAccount*.json

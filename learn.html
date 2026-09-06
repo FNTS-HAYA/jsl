@@ -5,6 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>学習モード — HANDIT!</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
+<<<<<<< HEAD
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* レベル選択画面 */
+    .level-wrap {
+      max-width: 520px; margin: 0 auto;
+      padding: 24px 20px 60px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .level-header {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .level-page-title { font-size: 22px; font-weight: 800; flex: 1; }
+
+    .level-list { display: flex; flex-direction: column; gap: 12px; }
+    .level-card {
+      background: var(--white); border: 1.5px solid var(--line);
+      border-radius: var(--radius); padding: 20px 22px;
+      display: flex; align-items: center; gap: 16px;
+      box-shadow: var(--shadow);
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+    }
+    .level-card:hover  { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .level-card:active { transform: translateY(0); }
+    .level-card.locked { opacity: 0.5; cursor: not-allowed; }
+    .level-card.locked:hover { transform: none; box-shadow: var(--shadow); }
+
+    .level-num {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 900; flex-shrink: 0;
+      font-family: -apple-system, sans-serif;
+    }
+    .level-info { flex: 1; }
+    .level-title { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
+    .level-words { font-size: 12px; color: var(--ink-3); }
+    .level-status { font-size: 22px; }
+
+    .level-card.cleared .level-num { background: var(--accent-l); color: var(--accent-d); }
+    .level-card.available .level-num { background: #E8F1FC; color: var(--blue); }
+    .level-card.locked .level-num { background: var(--line); color: var(--ink-3); }
+=======
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
   <style>
@@ -308,10 +352,23 @@
       box-shadow: 0 3px 0 var(--yellow-d); margin-bottom: 10px;
     }
     .auth-submit:hover { opacity: 0.9; }
+>>>>>>> 0482bb5 (NEW!!!!!)
   </style>
 </head>
 <body>
 
+<<<<<<< HEAD
+<!-- ローディング -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">読み込み中...</div>
+</div>
+
+<!-- ナビ -->
+<nav class="topbar">
+  <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
+  <div class="topbar-nav">
+=======
 <div class="loading-overlay" id="loading">
   <div class="loading-spinner"></div>
   <div class="loading-text" id="loading-text">モデルを読み込み中...</div>
@@ -393,10 +450,20 @@
       <button class="auth-logout-btn" id="logout-btn">ログアウト</button>
     </div>
     <button class="auth-btn" id="login-btn">👤 ログイン</button>
+>>>>>>> 0482bb5 (NEW!!!!!)
     <a href="index.html" class="topbar-link">← ホーム</a>
   </div>
 </nav>
 
+<<<<<<< HEAD
+<!-- ===== レベル選択 ===== -->
+<div id="view-levels">
+  <div class="level-wrap">
+    <div class="level-header">
+      <div class="level-page-title">📚 学習モード</div>
+    </div>
+    <div class="level-list" id="level-list"></div>
+=======
 <!-- ページタブ -->
 <div class="page-tabs" id="page-tabs-bar">
   <button class="page-tab active" data-page="map">📚 学習マップ</button>
@@ -417,6 +484,7 @@
   <div class="dict-wrap">
     <div class="dict-tabs" id="dict-tabs"></div>
     <div class="dict-grid" id="dict-grid"></div>
+>>>>>>> 0482bb5 (NEW!!!!!)
   </div>
 </div>
 
@@ -427,6 +495,28 @@
     <div class="ls-progress-wrap">
       <div class="ls-progress-bar" id="ls-progress" style="width:0%"></div>
     </div>
+<<<<<<< HEAD
+  </div>
+  <div class="ls-body">
+    <div class="ls-prompt">
+      <div class="ls-prompt-label">この手話をやってみよう</div>
+      <div class="ls-prompt-word" id="challenge-word">—</div>
+    </div>
+    <div class="camera-wrap">
+      <video id="video-lesson" autoplay playsinline muted></video>
+      <canvas id="canvas-lesson"></canvas>
+    </div>
+    <div class="hold-track"><div class="hold-fill" id="hold-fill"></div></div>
+    <div class="detect-bar">
+      <div class="detect-dot" id="lesson-dot"></div>
+      <div class="detect-label" id="lesson-label">手話を始めてください</div>
+      <div class="detect-conf"  id="lesson-conf"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 完了画面 ===== -->
+=======
     <div class="ls-phase-label" id="ls-phase-label">学習</div>
   </div>
   <div class="ls-body">
@@ -491,6 +581,7 @@
 </div>
 
 <!-- ===== 完了 ===== -->
+>>>>>>> 0482bb5 (NEW!!!!!)
 <div class="complete-screen" id="view-complete">
   <div class="complete-emoji">🎉</div>
   <div class="complete-title">レベルクリア！</div>
@@ -505,7 +596,11 @@
       <div class="complete-stat-label">XP獲得</div>
     </div>
   </div>
+<<<<<<< HEAD
+  <a href="#" class="complete-home-btn" id="complete-back-btn">レベル選択に戻る</a>
+=======
   <a href="#" class="complete-home-btn" id="complete-back-btn">マップに戻る</a>
+>>>>>>> 0482bb5 (NEW!!!!!)
 </div>
 
 <!-- フィードバック -->
@@ -520,41 +615,25 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
+<<<<<<< HEAD
+<script src="app.js"></script>
+=======
 
-<script>
-// ===================================================
-// 単語・レベルを追加するときはここを編集
-// ===================================================
-const LEVELS = [
-  { id:1, title:'あいさつ', icon:'👋', color:'#FFFBDD', words:['おはよう','こんにちは','ありがとう'], videos:{} },
-  { id:2, title:'きもち',   icon:'❤️', color:'#FFECEC', words:['好き','嫌い'],                       videos:{} },
-  { id:3, title:'フレーズ', icon:'💬', color:'#E8F1FC', words:['もう一度'],                          videos:{} },
-];
+<script type="module">
+import HANDIT_WORDS from './words.js';
+import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/features.js';
+import { Recognizer } from './js/recognizer.js';
 
-// 手話図鑑データ（動画を追加するときはvideoにパスを書く）
-const DICTIONARY = [
-  { word:'おはよう',     cat:'あいさつ', gif:null, desc:'右手をグーにして額の横に当て、前方へ下げる動作。' },
-  { word:'こんにちは',   cat:'あいさつ', gif:null, desc:'人差し指と中指を額に当て、前方へ下げる動作。' },
-  { word:'ありがとう',   cat:'あいさつ', gif:null, desc:'右手を胸の前に出し、前方へ傾ける動作。' },
-  { word:'好き',         cat:'きもち',   gif:null, desc:'胸の前で右手をグーにして、ハートを作るように動かす。' },
-  { word:'嫌い',         cat:'きもち',   gif:null, desc:'手を払うように外側へ振る動作。' },
-  { word:'もう一度',     cat:'会話',     gif:null, desc:'片手を上下に動かして「繰り返す」を表現する。' },
-  { word:'わかりました', cat:'会話',     gif:null, desc:'右手を額の横から前方に開く動作。' },
-  { word:'ゆっくり',     cat:'会話',     gif:null, desc:'両手をゆっくり前方に押し出す動作。' },
-  { word:'私',           cat:'自己紹介', gif:null, desc:'右手の人差し指で自分の胸を指す。' },
-  { word:'名前',         cat:'自己紹介', gif:null, desc:'両手の人差し指を交差させる動作。' },
-];
+// 単語とレベルは words.js が唯一の置き場所。追加はあちらで行う。
+await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行く
+const LEVELS     = HANDIT_WORDS.levels;
+const DICTIONARY = HANDIT_WORDS.dictionary;
 
-const MODEL_PATH     = 'dataset/model_single.onnx';
-const LABELS_PATH    = 'dataset/labels.json';
-const TARGET_FRAMES  = 64;
 const CONF_THRESHOLD = 0.70;
 const HOLD_FRAMES    = 15;
-const FACE_KEYS      = ['nose','forehead','chin','left_eye','right_eye','mouth'];
-const FACE_POINTS    = { nose:1, forehead:10, chin:152, left_eye:33, right_eye:263, mouth:13 };
 
-let ort_session=null, labels=[], frameBuffer=[], currentHandsData={}, currentFaceData=null;
-let handsDetector=null, faceMesh=null, mpCam=null, inferring=false;
+let recognizer=null, labels=[], frameBuffer=[], currentHandsData={}, currentFaceData=null;
+let handsDetector=null, faceMesh=null, mpCam=null;
 const PHASE = { LEARN:'learn', REVIEW:'review' };
 let currentPhase=PHASE.LEARN, currentLevel=null;
 let learnQueue=[], reviewQueue=[], currentChallenge=null, currentIdx=0;
@@ -857,12 +936,12 @@ async function init() {
   document.getElementById('loading').classList.remove('hidden');
   document.getElementById('loading-text').textContent='モデルを読み込み中...';
   try {
-    ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/';
-    ort_session=await ort.InferenceSession.create(MODEL_PATH);
-    const ld=await fetch(LABELS_PATH).then(r=>r.json());
-    labels=ld.labels;
+    recognizer=new Recognizer({confThreshold:CONF_THRESHOLD});
+    await recognizer.load();
+    recognizer.prunePromoted();      // 学習済みになった単語の即席登録を掃除
+    labels=recognizer.knownWords;    // 学習済み + スタジオで登録した単語
   } catch(e) {
-    document.getElementById('loading-text').textContent='モデルの読み込みに失敗しました。';
+    document.getElementById('loading-text').textContent='AIの読み込みに失敗しました。dataset/ を確認してください。';
     console.error(e); return;
   }
   document.getElementById('loading-text').textContent='MediaPipeを初期化中...';
@@ -879,8 +958,10 @@ async function init() {
 }
 
 // ===== カメラ =====
+let camSlot='pc';   // レッスン中は画面幅が変わってもスロットを変えない
 async function startCam() {
-  const mobile=isMobile();
+  camSlot=isMobile()?'sp':'pc';
+  const mobile=camSlot==='sp';
   const vid=mobile?'video-lesson-sp':'video-lesson';
   const cid=mobile?'canvas-lesson-sp':'canvas-lesson';
   const video=document.getElementById(vid);
@@ -903,20 +984,18 @@ function stopCam() {
     const v=document.getElementById(id);
     if(v&&v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}
   });
-  frameBuffer=[];holdCount=0;inferring=false;currentHandsData={};currentFaceData=null;
+  frameBuffer=[];holdCount=0;currentHandsData={};currentFaceData=null;
 }
 
 // ===== MediaPipe =====
 function onFaceResults(r){
   if(!r.multiFaceLandmarks||!r.multiFaceLandmarks.length){currentFaceData=null;return;}
-  const lm=r.multiFaceLandmarks[0];currentFaceData={};
-  for(const k in FACE_POINTS){const i=FACE_POINTS[k];currentFaceData[k]={x:lm[i].x,y:lm[i].y,z:lm[i].z};}
+  currentFaceData=pickFacePoints(r.multiFaceLandmarks[0]);
 }
 
 function onHandResults(r) {
   if(!document.getElementById('view-lesson').classList.contains('active'))return;
-  const mobile=isMobile();
-  const cid=mobile?'canvas-lesson-sp':'canvas-lesson';
+  const cid=camSlot==='sp'?'canvas-lesson-sp':'canvas-lesson';
   const canvas=document.getElementById(cid);if(!canvas)return;
   const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
   currentHandsData={};
@@ -928,34 +1007,25 @@ function onHandResults(r) {
     drawLandmarks(ctx,lm,{color:side==='Right'?'#FFD60A':'#CE82FF',lineWidth:1,radius:3});
   }
   if(currentFaceData)FACE_KEYS.forEach(k=>{const p=currentFaceData[k];if(!p)return;ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,4,0,Math.PI*2);ctx.fillStyle='#0071E3';ctx.fill();});
-  frameBuffer.push(buildVec());
+  frameBuffer.push(buildVec(currentHandsData,currentFaceData));
   if(frameBuffer.length>TARGET_FRAMES)frameBuffer.shift();
-  if(frameBuffer.length===TARGET_FRAMES&&!answered)runInfer();
+  if(frameBuffer.length===TARGET_FRAMES&&!answered&&!recognizer.busy)runInfer();
 }
 
-// ===== 特徴量 =====
-function handVec(lm){const v=[];for(const p of lm)v.push(p.x,p.y,p.z);const w=lm[0],m=lm[9],dx=m.x-w.x,dy=m.y-w.y,dz=m.z-w.z;const dl=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;v.push(dx/dl,dy/dl,dz/dl);const p0=lm[0],p1=lm[5],p2=lm[17];const u=[p1.x-p0.x,p1.y-p0.y,p1.z-p0.z],t=[p2.x-p0.x,p2.y-p0.y,p2.z-p0.z];const nx=u[1]*t[2]-u[2]*t[1],ny=u[2]*t[0]-u[0]*t[2],nz=u[0]*t[1]-u[1]*t[0];const nl=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;v.push(nx/nl,ny/nl,nz/nl);return v;}
-function distVec(lm,face){const w=lm[0];return FACE_KEYS.map(k=>{if(!face||!face[k])return 0;const p=face[k],dx=w.x-p.x,dy=w.y-p.y,dz=w.z-p.z;return Math.sqrt(dx*dx+dy*dy+dz*dz);});}
-function buildVec(){const Z69=new Array(69).fill(0),Z6=new Array(6).fill(0),Z18=new Array(18).fill(0);const r=currentHandsData['Right']?handVec(currentHandsData['Right']):Z69.slice();const l=currentHandsData['Left']?handVec(currentHandsData['Left']):Z69.slice();let fv=Z18.slice();if(currentFaceData)FACE_KEYS.forEach((k,i)=>{const p=currentFaceData[k];if(p){fv[i*3]=p.x;fv[i*3+1]=p.y;fv[i*3+2]=p.z;}});const rd=currentHandsData['Right']?distVec(currentHandsData['Right'],currentFaceData):Z6.slice();const ld=currentHandsData['Left']?distVec(currentHandsData['Left'],currentFaceData):Z6.slice();return [...r,...l,...fv,...rd,...ld];}
+// 特徴量の計算は js/features.js に移動
 
 // ===== 推論 =====
 async function runInfer(){
-  if(inferring)return;inferring=true;
-  const t=new ort.Tensor('float32',Float32Array.from(frameBuffer.flat()),[1,TARGET_FRAMES,168]);
-  try{
-    const out=await ort_session.run({input:t});
-    const lg=Array.from(out.output.data);
-    const mx=Math.max(...lg);const ex=lg.map(v=>Math.exp(v-mx));const sm=ex.reduce((a,b)=>a+b,0);const pb=ex.map(v=>v/sm);
-    const i=pb.indexOf(Math.max(...pb));const label=labels[i],conf=pb[i];
-    const ok=label===currentChallenge&&conf>=CONF_THRESHOLD;
-    document.getElementById('lesson-dot').className='detect-dot'+(conf>=CONF_THRESHOLD?(ok?' active':' wrong'):'');
-    document.getElementById('lesson-label').textContent=conf>=0.35?label:'手をカメラに向けてください';
-    document.getElementById('lesson-conf').textContent=conf>=0.35?Math.round(conf*100)+'%':'';
-    document.getElementById('hold-fill').style.width=(holdCount/HOLD_FRAMES*100)+'%';
-    if(ok){holdCount++;if(holdCount>=HOLD_FRAMES){answered=true;correctCount++;showFeedback(true);}}
-    else holdCount=0;
-  }catch(e){console.error(e);}
-  inferring=false;
+  const res = await recognizer.classify(frameBuffer);
+  if(!res) return;
+  const {label,conf}=res;
+  const ok = label===currentChallenge && conf>=CONF_THRESHOLD;
+  document.getElementById('lesson-dot').className='detect-dot'+(conf>=CONF_THRESHOLD?(ok?' active':' wrong'):'');
+  document.getElementById('lesson-label').textContent=conf>=0.35?label:'手をカメラに向けてください';
+  document.getElementById('lesson-conf').textContent=conf>=0.35?Math.round(conf*100)+'%':'';
+  document.getElementById('hold-fill').style.width=(holdCount/HOLD_FRAMES*100)+'%';
+  if(ok){ holdCount++; if(holdCount>=HOLD_FRAMES){answered=true;correctCount++;showFeedback(true);} }
+  else holdCount=0;
 }
 
 // ===== レッスン =====
@@ -1081,5 +1151,6 @@ document.getElementById('complete-back-btn').addEventListener('click',e=>{
 init();
 initFirebase();
 </script>
+>>>>>>> 0482bb5 (NEW!!!!!)
 </body>
 </html>

@@ -106,7 +106,7 @@
 
 <nav class="topbar">
   <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
-  <a href="index.html" class="topbar-link">← ホーム</a>
+  <a href="index.html" class="topbar-link">ホームに戻る</a>
 </nav>
 
 <!-- モーダル -->
@@ -137,29 +137,12 @@
   <div class="dict-grid" id="dict-grid"></div>
 </div>
 
-<script>
-// ===================================================
-// 手話図鑑データ
-// 単語を追加するときはここに追加するだけ
-// video: 動画ファイルのパス（なければnull）
-// desc:  手話の動き方の説明
-// ===================================================
-const DICTIONARY = [
-  // あいさつ
-  { word:'おはよう',     yomi:'おはよう',         cat:'あいさつ', video:null, desc:'右手をグーにして額の横に当て、前方へ下げる動作。' },
-  { word:'こんにちは',   yomi:'こんにちは',       cat:'あいさつ', video:null, desc:'人差し指と中指を額に当て、前方へ下げる動作。' },
-  { word:'ありがとう',   yomi:'ありがとう',       cat:'あいさつ', video:null, desc:'右手を胸の前に出し、前方へ傾ける動作。' },
-  // きもち
-  { word:'好き',         yomi:'すき',             cat:'きもち',   video:null, desc:'胸の前で右手をグーにして、ハートを作るように動かす。' },
-  { word:'嫌い',         yomi:'きらい',           cat:'きもち',   video:null, desc:'手を払うように外側へ振る動作。' },
-  // 会話
-  { word:'もう一度',     yomi:'もういちど',       cat:'会話',     video:null, desc:'片手を上下に動かして「繰り返す」を表現する。' },
-  { word:'わかりました', yomi:'わかりました',     cat:'会話',     video:null, desc:'右手を額の横から前方に開く動作。' },
-  { word:'ゆっくり',     yomi:'ゆっくり',         cat:'会話',     video:null, desc:'両手をゆっくり前方に押し出す動作。' },
-  // 自己紹介
-  { word:'私',           yomi:'わたし',           cat:'自己紹介', video:null, desc:'右手の人差し指で自分の胸を指す。' },
-  { word:'名前',         yomi:'なまえ',           cat:'自己紹介', video:null, desc:'両手の人差し指を交差させる動作。' },
-];
+<script type="module">
+import HANDIT_WORDS from './words.js';
+
+// 単語は words.js が唯一の置き場所
+await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行く
+const DICTIONARY = HANDIT_WORDS.dictionary;
 
 const CATEGORIES = ['すべて', ...new Set(DICTIONARY.map(d => d.cat))];
 let currentCat = 'すべて';
@@ -192,9 +175,9 @@ function buildGrid() {
     card.className = 'dict-card';
     card.innerHTML = `
       <div class="dict-thumb">
-        ${item.video
-          ? `<video src="${item.video}" muted loop></video><div class="dict-play-icon">▶</div>`
-          : `<div class="dict-thumb-placeholder"><div class="dict-thumb-placeholder-icon">🤟</div><div class="dict-thumb-placeholder-text">動画準備中</div></div>`
+        ${item.gif
+          ? `<img src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+          : `<div class="dict-thumb-placeholder"><div class="dict-thumb-placeholder-icon">🤟</div><div class="dict-thumb-placeholder-text">お手本を準備中</div></div>`
         }
       </div>
       <div class="dict-card-body">
@@ -214,10 +197,10 @@ function openModal(item) {
   document.getElementById('modal-desc').textContent = item.desc || '説明準備中';
 
   const wrap = document.getElementById('modal-video-wrap');
-  if (item.video) {
-    wrap.innerHTML = `<video src="${item.video}" controls autoplay loop style="width:100%;height:100%;object-fit:cover;display:block;"></video>`;
+  if (item.gif) {
+    wrap.innerHTML = `<img src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`;
   } else {
-    wrap.innerHTML = `<div class="dict-modal-video-placeholder"><span style="font-size:40px;">🎬</span><span>動画準備中</span></div>`;
+    wrap.innerHTML = `<div class="dict-modal-video-placeholder"><span style="font-size:40px;">🤟</span><span>お手本を準備中</span></div>`;
   }
 
   document.getElementById('dict-modal').classList.remove('hidden');
