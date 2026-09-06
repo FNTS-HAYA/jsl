@@ -46,6 +46,11 @@ async function init() {
 
   await startCam();
   hideLoading();
+
+  // コンソールから中身を見られるようにしておく（調査用）
+  //   handit.recognizer.lastProto  … プロトタイプの類似度
+  //   handit.recognizer.labels     … 学習済みの単語
+  window.handit = { recognizer };
 }
 
 // ===== カメラ =====

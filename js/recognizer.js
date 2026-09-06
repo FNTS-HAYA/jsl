@@ -31,6 +31,9 @@ export class Recognizer {
     // スタジオは新しい単語を組み込むので、常にエンコーダが要る
     this.needEncoder    = opts.needEncoder    ?? false;
     this.protoThreshold = opts.protoThreshold ?? 0.82;
+    // 2番目に似ている単語との差。これが小さいなら「どれにでも似ている」
+    // ということなので、その一致は信用しない。
+    this.protoMargin    = opts.protoMargin    ?? 0.04;
 
     this.encoderVersion = null;   // エンコーダの版。合わないプロトタイプは使わない
     this.session    = null;   // 分類モデル
@@ -120,29 +123,46 @@ export class Recognizer {
         best = { label: this.labels[bi], conf: probs[bi], source: 'model' };
       }
 
-      // 学習済みモデルが自信を持てなかったときだけプロトタイプを見る
-      const needProto = this.encoder
-        && Object.keys(this.prototypes).length > 0
-        && (!best || best.conf < this.confThreshold);
-
-      if (needProto) {
+      // プロトタイプは常に照合する。
+      //
+      // 分類モデルは自分が学習した単語の中からしか答えられないので、
+      // 知らない単語を入れても、知っている単語のどれかに高い確信度を出す。
+      // だから「モデルが自信を持てなかったときだけ照合する」ではいけない。
+      //
+      // ただしプロトタイプ側も、エンコーダが弱いと
+      // どの手話にも同じくらい似てしまう。そこで
+      //   ・しきい値を超えていること
+      //   ・2番目に似ている「別の単語」と十分な差があること
+      // の両方を求める。差が無い一致は、区別できていないだけなので捨てる。
+      if (this.encoder && Object.keys(this.prototypes).length > 0) {
         const emb = await this.embed(frames);
         if (emb) {
-          let bw = null, bs = -1;
+          const scores = [];
           for (const [word, vecs] of Object.entries(this.prototypes)) {
-            for (const v of vecs) {
-              const s = dot(emb, v);
-              if (s > bs) { bs = s; bw = word; }
-            }
+            let s = -1;
+            for (const v of vecs) s = Math.max(s, dot(emb, v));
+            scores.push({ word, sim: s });
           }
-          if (bw && bs >= this.protoThreshold) {
-            // 類似度をだいたい確信度のスケールに直す
-            const conf = Math.min(0.99, (bs - this.protoThreshold) / (1 - this.protoThreshold) * 0.3 + 0.70);
-            if (!best || conf > best.conf) best = { label: bw, conf, source: 'prototype' };
+          scores.sort((a, b) => b.sim - a.sim);
+          const top = scores[0];
+          const runnerUp = scores.find(x => x.word !== top.word);
+          const margin = runnerUp ? top.sim - runnerUp.sim : 1;
+          this.lastProto = { top, runnerUp, margin, all: scores };  // 確認用
+
+          if (top.sim >= this.protoThreshold && margin >= this.protoMargin) {
+            const conf = Math.min(0.99,
+              (top.sim - this.protoThreshold) / (1 - this.protoThreshold) * 0.3 + 0.70);
+            // モデルが構造上その単語を出力できないなら、プロトタイプを採る。
+            // 上の2条件を通っているので「何にでも当たる一致」ではない。
+            const modelCannotSay = !this.labels.includes(top.word);
+            if (!best || modelCannotSay || conf > best.conf) {
+              best = { label: top.word, conf, source: 'prototype' };
+            }
           }
         }
       }
 
+      this.lastResult = best;
       return best;
     } catch (e) {
       console.error('推論エラー:', e);
