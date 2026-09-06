@@ -220,14 +220,20 @@ class SignTransformer(nn.Module):
 
 
 class EncoderOnly(nn.Module):
-    """ONNX 書き出し用。埋め込みを L2 正規化して返す。"""
+    """ONNX 書き出し用。埋め込みをそのまま返す。
+
+    以前はここで L2 正規化していたが、その割り算が opset 18 では
+    「軸を入力として受け取る ReduceL2」に変換され、
+    ONNX Runtime Web が読めずにモデルの読み込みごと失敗していた。
+    正規化は js/recognizer.js の embed() が受け取った後に行うので、
+    グラフ側では何もしない。
+    """
     def __init__(self, model):
         super().__init__()
         self.m = model
 
     def forward(self, x):
-        e = self.m.embed(x)
-        return e / (e.norm(dim=-1, keepdim=True) + 1e-8)
+        return self.m.embed(x)
 
 
 def warm_start(model, labels):
@@ -354,13 +360,8 @@ def train(epochs=120, val_ratio=0.2, batch=32, lr=3e-4, seed=0):
 
     model.cpu().eval()
     dummy = torch.zeros(1, FRAMES, DIM)
-    # opset は 18。14 を指定すると新しい PyTorch が変換に失敗して
-    # 「Failed to convert ... target version 14」という長いエラーが出る。
-    # ONNX Runtime Web 1.16 は 18 を読めるので、最初から 18 で書き出す。
-    torch.onnx.export(model, dummy, os.path.join(DATA_DIR, 'model_single.onnx'),
-                      input_names=['input'], output_names=['output'], opset_version=18)
-    torch.onnx.export(EncoderOnly(model).eval(), dummy, os.path.join(DATA_DIR, 'encoder.onnx'),
-                      input_names=['input'], output_names=['embedding'], opset_version=18)
+    export_onnx(model, dummy, os.path.join(DATA_DIR, 'model_single.onnx'), 'output')
+    export_onnx(EncoderOnly(model).eval(), dummy, os.path.join(DATA_DIR, 'encoder.onnx'), 'embedding')
 
     export_prototypes(model, data, labels)
 
@@ -371,6 +372,61 @@ def train(epochs=120, val_ratio=0.2, batch=32, lr=3e-4, seed=0):
     print('  dataset/prototypes.json')
     print('\n単語:', ' / '.join(labels))
     print('\nこの4つを push すれば公開版に反映される。')
+
+
+# ---------------------------------------------------
+# ONNX の書き出し
+#
+# ブラウザ側は onnxruntime-web 1.16 を使っている。これが読めるのは
+# IR バージョン 9 まで、opset は 19 まで。
+# ところが今の PyTorch は IR バージョン 10 以降で書き出すため、
+# そのままだと ORT Web が読み込みに失敗し、
+# 「10034032」のような数字だけのエラーになる。
+#
+# そこで
+#   ・古い方（TorchScript）の書き出し器を使う … 素直なグラフになる
+#   ・opset は 17 に固定                        … ORT Web 1.16 が確実に読める
+#   ・書き出したあと IR バージョンを 9 に下げる
+# の3点で古い ORT Web に合わせている。
+#
+# 将来 ORT Web を新しくしたら、この関数ごと
+# torch.onnx.export の1行に戻してよい。
+# ---------------------------------------------------
+OPSET = 17
+IR_VERSION = 9
+
+
+def export_onnx(module, dummy, path, output_name):
+    try:
+        torch.onnx.export(module, dummy, path, input_names=['input'],
+                          output_names=[output_name], opset_version=OPSET, dynamo=False)
+    except TypeError:
+        # dynamo 引数が無い古い PyTorch
+        torch.onnx.export(module, dummy, path, input_names=['input'],
+                          output_names=[output_name], opset_version=OPSET)
+
+    try:
+        import onnx
+        m = onnx.load(path)
+        if m.ir_version > IR_VERSION:
+            m.ir_version = IR_VERSION
+            onnx.save(m, path)
+        ops = {o.version for o in m.opset_import if o.domain in ('', 'ai.onnx')}
+        print(f'  {os.path.basename(path):22s} opset={sorted(ops)} IR={m.ir_version}')
+    except ImportError:
+        print(f'  {os.path.basename(path):22s} 書き出し済み（onnx 未導入のため IR は未調整）')
+
+    # ブラウザに渡す前にここで読めるか確かめておく
+    try:
+        import onnxruntime as rt
+        sess = rt.InferenceSession(path, providers=['CPUExecutionProvider'])
+        sess.run(None, {'input': dummy.numpy()})
+        print(f'      読み込みテスト OK')
+    except ImportError:
+        pass
+    except Exception as e:
+        print(f'      !! 読み込みテスト失敗: {e}')
+        print(f'      !! このままだとブラウザでも読めない可能性が高い')
 
 
 def export_prototypes(model, data, labels):
@@ -388,12 +444,14 @@ def export_prototypes(model, data, labels):
             x = d['samples']
             if len(x) == 0:
                 continue
-            a = enc(torch.from_numpy(x)).mean(0)
-            b = enc(torch.from_numpy(mirror(x))).mean(0)
-            vecs = []
-            for v in (a, b):
-                v = v / (v.norm() + 1e-8)
-                vecs.append([round(float(t), 4) for t in v])
+            def mean_of_normalized(arr):
+                e = enc(torch.from_numpy(arr))
+                e = e / (e.norm(dim=-1, keepdim=True) + 1e-8)   # 1本ずつ正規化
+                m = e.mean(0)
+                return m / (m.norm() + 1e-8)                    # 平均してもう一度
+            a = mean_of_normalized(x)
+            b = mean_of_normalized(mirror(x))
+            vecs = [[round(float(t), 4) for t in v] for v in (a, b)]
             proto[d['word']] = vecs
 
     enc_path = os.path.join(DATA_DIR, 'encoder.onnx')

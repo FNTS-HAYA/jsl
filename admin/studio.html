@@ -436,7 +436,7 @@ async function init() {
   renderWords();
 
   setLoading('AIを読み込み中...');
-  recognizer = new Recognizer({ base: '../' });
+  recognizer = new Recognizer({ base: '../', needEncoder: true });
   try { await recognizer.load(); } catch (e) { console.warn(e); }
 
   setLoading('カメラを起動中...');
@@ -627,7 +627,9 @@ async function autoSync(word) {
   setSync('モデルに組み込んでいます…', 'busy');
   try {
     if (!recognizer || !recognizer.encoder) {
-      throw new Error('encoder.onnx がまだありません。一度だけ学習を回してください');
+      throw new Error(recognizer && recognizer.encoderError
+        ? 'encoder.onnx を読み込めません: ' + (recognizer.encoderError.message || recognizer.encoderError)
+        : 'encoder.onnx がまだありません。一度だけ学習を回してください');
     }
     await recognizer.registerPrototype(word.word, word.takes.map(unflatten));
 

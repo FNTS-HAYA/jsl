@@ -15,17 +15,24 @@
 // ===================================================
 
 import { TARGET_FRAMES, FEATURE_DIM, mirrorSequence } from './features.js';
+import { fetchPrototypes, savePrototype, deletePrototype, cloudAdmin } from './cloud.js';
 
 const PROTO_KEY = 'handit_prototypes';
 
 export class Recognizer {
   constructor(opts = {}) {
-    this.modelPath   = opts.modelPath   || 'dataset/model_single.onnx';
-    this.labelsPath  = opts.labelsPath  || 'dataset/labels.json';
-    this.encoderPath = opts.encoderPath || 'dataset/encoder.onnx';
+    // サイト直下以外（admin/ など）から使うときは base:'../' を渡す
+    const base = opts.base || '';
+    this.base        = base;
+    this.modelPath   = opts.modelPath   || base + 'dataset/model_single.onnx';
+    this.labelsPath  = opts.labelsPath  || base + 'dataset/labels.json';
+    this.encoderPath = opts.encoderPath || base + 'dataset/encoder.onnx';
     this.confThreshold  = opts.confThreshold  ?? 0.70;
+    // スタジオは新しい単語を組み込むので、常にエンコーダが要る
+    this.needEncoder    = opts.needEncoder    ?? false;
     this.protoThreshold = opts.protoThreshold ?? 0.82;
 
+    this.encoderVersion = null;   // エンコーダの版。合わないプロトタイプは使わない
     this.session    = null;   // 分類モデル
     this.encoder    = null;   // 埋め込みエンコーダ
     this.labels     = [];     // 学習済みの単語
@@ -37,23 +44,38 @@ export class Recognizer {
   async load() {
     ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/';
 
+    // 先にエンコーダの版を調べる。
+    // no-cache で取りに行き、その版をモデルのURLに付けることで、
+    // 学習でモデルが差し替わったのに古いものがキャッシュされ続けるのを防ぐ。
+    try {
+      const meta = await fetch(this.base + 'dataset/prototypes.json', { cache: 'no-cache' })
+        .then(r => r.json());
+      this.encoderVersion = meta.encoderVersion || null;
+    } catch { /* まだ学習を回していない場合は null のまま */ }
+    const bust = this.encoderVersion ? '?v=' + this.encoderVersion : '';
+
     // 分類モデル（まだ1単語も学習していない場合は無くてもよい）
     try {
-      this.session = await ort.InferenceSession.create(this.modelPath);
-      const ld = await fetch(this.labelsPath).then(r => r.json());
+      this.session = await ort.InferenceSession.create(this.modelPath + bust);
+      const ld = await fetch(this.labelsPath + bust).then(r => r.json());
       this.labels = ld.labels || [];
     } catch (e) {
       console.warn('分類モデルを読み込めませんでした。プロトタイプのみで動作します。', e);
     }
 
-    this.prototypes = loadPrototypes();
+    // クラウドのプロトタイプ（全ユーザー共通）と、この端末のぶんを合わせる
+    let cloud = {};
+    try { cloud = await fetchPrototypes(this.encoderVersion); } catch (e) { console.warn(e); }
+    this.prototypes = { ...loadPrototypes(), ...cloud };
 
-    // プロトタイプがある場合だけエンコーダを読む
-    if (Object.keys(this.prototypes).length > 0 || this.session === null) {
+    // エンコーダは、プロトタイプがあるとき・分類モデルが無いとき・
+    // 明示的に要求されたとき（スタジオ）に読む。
+    if (this.needEncoder || Object.keys(this.prototypes).length > 0 || this.session === null) {
       try {
-        this.encoder = await ort.InferenceSession.create(this.encoderPath);
+        this.encoder = await ort.InferenceSession.create(this.encoderPath + bust);
       } catch (e) {
-        console.warn('encoder.onnx を読み込めませんでした。即席登録した単語は認識されません。', e);
+        this.encoderError = e;
+        console.warn('encoder.onnx を読み込めませんでした。', this.encoderPath, e);
       }
     }
 
@@ -133,7 +155,11 @@ export class Recognizer {
   // ---- プロトタイプ登録（スタジオから呼ぶ） ----
   // samples: [[64 x 168], ...] 収録した複数テイク
   async registerPrototype(word, samples) {
-    if (!this.encoder) throw new Error('encoder.onnx が無いため即席登録できません');
+    if (!this.encoder) {
+      throw new Error(this.encoderError
+        ? `encoder.onnx を読み込めませんでした（${this.encoderError.message || this.encoderError}）`
+        : 'encoder.onnx が読み込まれていません');
+    }
     const embs = [];
     for (const s of samples) {
       const a = await this.embed(s);           if (a) embs.push(a);
@@ -145,14 +171,24 @@ export class Recognizer {
     const half = embs.length / 2;
     const orig = embs.filter((_, i) => i % 2 === 0);
     const mirr = embs.filter((_, i) => i % 2 === 1);
-    this.prototypes[word] = [meanNorm(orig), meanNorm(mirr)].filter(Boolean);
+    const vecs = [meanNorm(orig), meanNorm(mirr)].filter(Boolean);
+    this.prototypes[word] = vecs;
     savePrototypes(this.prototypes);
-    return this.prototypes[word].length;
+
+    // 権限があればクラウドにも上げる。ここで全ユーザーに反映される。
+    if (cloudAdmin()) {
+      try { await savePrototype(word, vecs, this.encoderVersion); }
+      catch (e) { console.warn('クラウドに保存できませんでした', e); }
+    }
+    return vecs.length;
   }
 
-  removePrototype(word) {
+  async removePrototype(word) {
     delete this.prototypes[word];
     savePrototypes(this.prototypes);
+    if (cloudAdmin()) {
+      try { await deletePrototype(word); } catch (e) { console.warn(e); }
+    }
   }
 
   // train.py 後に呼ぶと、学習済みになった単語のプロトタイプを掃除する
