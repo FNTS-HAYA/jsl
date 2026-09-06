@@ -354,10 +354,13 @@ def train(epochs=120, val_ratio=0.2, batch=32, lr=3e-4, seed=0):
 
     model.cpu().eval()
     dummy = torch.zeros(1, FRAMES, DIM)
+    # opset は 18。14 を指定すると新しい PyTorch が変換に失敗して
+    # 「Failed to convert ... target version 14」という長いエラーが出る。
+    # ONNX Runtime Web 1.16 は 18 を読めるので、最初から 18 で書き出す。
     torch.onnx.export(model, dummy, os.path.join(DATA_DIR, 'model_single.onnx'),
-                      input_names=['input'], output_names=['output'], opset_version=14)
-    torch.onnx.export(EncoderOnly(model), dummy, os.path.join(DATA_DIR, 'encoder.onnx'),
-                      input_names=['input'], output_names=['embedding'], opset_version=14)
+                      input_names=['input'], output_names=['output'], opset_version=18)
+    torch.onnx.export(EncoderOnly(model).eval(), dummy, os.path.join(DATA_DIR, 'encoder.onnx'),
+                      input_names=['input'], output_names=['embedding'], opset_version=18)
 
     export_prototypes(model, data, labels)
 

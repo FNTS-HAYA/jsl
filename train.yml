@@ -1,0 +1,76 @@
+# ===================================================
+# HANDIT — 単語を追加したら自動で学習する
+#
+# スタジオの「AIに登録する」から repository_dispatch で呼ばれる。
+# 手動で回したいときは Actions タブの Run workflow から。
+#
+# 必要な Secrets（リポジトリの Settings → Secrets and variables → Actions）
+#   FIREBASE_SERVICE_ACCOUNT … サービスアカウントの JSON をそのまま貼る
+# ===================================================
+
+name: 手話モデルの学習
+
+on:
+  repository_dispatch:
+    types: [handit-train]
+  workflow_dispatch:
+
+# 連続で単語を追加しても、最後の1回だけ走ればいい
+concurrency:
+  group: handit-train
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 依存関係を入れる
+        run: |
+          pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy onnx onnxscript google-cloud-firestore
+
+      - name: Firestore から収録データを取り込む
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python tools/sync_firestore.py pull
+
+      - name: 学習する
+        run: python train.py --epochs 150
+
+      - name: プロトタイプを Firestore に書き戻す
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: python tools/sync_firestore.py push
+
+      - name: 結果をコミットする
+        run: |
+          git config user.name  "handit-bot"
+          git config user.email "actions@github.com"
+          git add dataset/
+          if git diff --staged --quiet; then
+            echo "変化なし。コミットしない。"
+          else
+            git commit -m "学習: モデルを更新 ($(date +%Y-%m-%d\ %H:%M))"
+            git push
+          fi
+
+      - name: まとめ
+        if: always()
+        run: |
+          echo "### 学習の結果" >> $GITHUB_STEP_SUMMARY
+          if [ -f dataset/labels.json ]; then
+            python -c "import json;d=json.load(open('dataset/labels.json'));print('単語',len(d['labels']),'個:', ' / '.join(d['labels']))" >> $GITHUB_STEP_SUMMARY
+          fi
