@@ -6,3 +6,6 @@ dataset/checkpoint.pt.bak
 token
 *-firebase-adminsdk-*.json
 serviceAccount*.json
+*.A
+*.B
+*.bak
