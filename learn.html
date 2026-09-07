@@ -582,7 +582,7 @@ import * as Rewards from './js/rewards.js';
 // 単語とレベルは words.js が唯一の置き場所。追加はあちらで行う。
 Rewards.applyTheme();               // XP で選んだ配色を先に当てる
 await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行く
-const LEVELS     = HANDIT_WORDS.levels;
+const LEVELS     = HANDIT_WORDS.groups;   // カテゴリごとのまとまり
 const DICTIONARY = HANDIT_WORDS.dictionary;
 
 const CONF_THRESHOLD = 0.70;

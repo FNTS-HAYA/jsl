@@ -39,6 +39,12 @@
   .word-row-main { flex: 1; min-width: 0; }
   .word-row-name { font-size: 15px; font-weight: 700; }
   .word-row-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .cat-head {
+    font-size: 11px; font-weight: 700; color: var(--ink-3);
+    letter-spacing: 0.06em; padding: 12px 12px 5px;
+    border-bottom: 1.5px solid var(--line); margin-bottom: 4px;
+  }
+  .cat-head:first-child { padding-top: 2px; }
   .word-row-count {
     font-size: 12px; font-weight: 700; color: var(--ink-2);
     background: var(--bg); border: 1.5px solid var(--line);
@@ -286,6 +292,7 @@
       <div class="rec-actions">
         <button class="btn btn-mark" id="btn-record" disabled>1テイク録る</button>
         <button class="btn btn-line" id="btn-resync" disabled>いま反映し直す</button>
+        <button class="btn btn-line" id="btn-editcat" disabled>カテゴリを変える</button>
         <button class="btn btn-line" id="btn-delete" disabled>この単語を削除</button>
       </div>
 
@@ -317,7 +324,6 @@
     <div class="field"><label for="f-word">単語</label><input id="f-word" placeholder="例: おつかれさま"/></div>
     <div class="field"><label for="f-cat">カテゴリ</label><input id="f-cat" list="cat-list" placeholder="例: あいさつ"/>
       <datalist id="cat-list"></datalist></div>
-    <div class="field"><label for="f-level">レベル</label><input id="f-level" type="number" min="1" value="1"/></div>
     <div class="field"><label for="f-desc">手の動かし方</label><textarea id="f-desc" placeholder="例: 右手を額から前に下ろす"></textarea></div>
     <div class="modal-error" id="f-error"></div>
     <div class="modal-actions">
@@ -430,7 +436,7 @@ async function init() {
   // 単語一覧にあるものは、まだ収録していなくてもリストに出す
   for (const w of HANDIT_WORDS.words) {
     if (!words.find(x => x.word === w.word)) {
-      words.push({ word: w.word, cat: w.cat, level: w.level, desc: w.desc, takes: [], fromMaster: true });
+      words.push({ word: w.word, cat: w.cat, desc: w.desc, takes: [], fromMaster: true });
     }
   }
   renderWords();
@@ -635,7 +641,7 @@ async function autoSync(word) {
 
     if (cloudAdmin()) {
       const list = HANDIT_WORDS.words.filter(w => w.word !== word.word);
-      list.push({ word: word.word, cat: word.cat, level: word.level,
+      list.push({ word: word.word, cat: word.cat,
                   gif: word.gif || null, desc: word.desc || '' });
       await saveCatalog(list);
       await HANDIT_WORDS.load();
@@ -701,8 +707,20 @@ function renderWords() {
     return;
   }
   list.innerHTML = '';
-  words.sort((a, b) => (a.level || 99) - (b.level || 99) || a.word.localeCompare(b.word, 'ja'));
+  const catRank = c => { const i = HANDIT_WORDS.categories.indexOf(c || '未分類'); return i === -1 ? 999 : i; };
+  words.sort((a, b) => catRank(a.cat) - catRank(b.cat)
+                    || (a.cat || '').localeCompare(b.cat || '', 'ja')
+                    || a.word.localeCompare(b.word, 'ja'));
+  let lastCat = null;
   for (const w of words) {
+    const cat = w.cat || '未分類';
+    if (cat !== lastCat) {                     // カテゴリの区切りを入れる
+      const h = document.createElement('div');
+      h.className = 'cat-head';
+      h.textContent = cat;
+      list.appendChild(h);
+      lastCat = cat;
+    }
     const st = statusOf(w);
     const n = w.takes.length;
     const row = document.createElement('div');
@@ -711,7 +729,7 @@ function renderWords() {
       <span class="status-pip ${st}" title="${STATUS_TEXT[st]}"></span>
       <div class="word-row-main">
         <div class="word-row-name">${esc(w.word)}</div>
-        <div class="word-row-meta">${esc(w.cat || '未分類')} · Lv.${w.level || '-'} · ${STATUS_TEXT[st]}</div>
+        <div class="word-row-meta">${esc(w.cat || '未分類')} · ${STATUS_TEXT[st]}</div>
       </div>
       <span class="word-row-count ${n >= MIN_TAKES ? 'ready' : ''}">${n}</span>`;
     row.addEventListener('click', () => select(w));
@@ -725,6 +743,7 @@ function select(w) {
   document.getElementById('target-note').textContent = w.desc || '説明はまだ無い';
   document.getElementById('btn-record').disabled = false;
   document.getElementById('btn-delete').disabled = false;
+  document.getElementById('btn-editcat').disabled = false;
   renderTakes(); renderWords();
   const need = MIN_TAKES - w.takes.length;
   setSync(need > 0 ? `あと${need}テイクで自動的に組み込まれる` : 'この単語は組み込み済み',
@@ -775,18 +794,17 @@ function closeNew() {
 document.getElementById('f-save').addEventListener('click', async () => {
   const word  = document.getElementById('f-word').value.trim();
   const cat   = document.getElementById('f-cat').value.trim() || '未分類';
-  const level = parseInt(document.getElementById('f-level').value) || 1;
   const desc  = document.getElementById('f-desc').value.trim();
   const err   = document.getElementById('f-error');
   if (!word) { err.textContent = '単語を入力してください'; return; }
   if (words.find(w => w.word === word)) { err.textContent = 'その単語はもうあります'; return; }
-  const rec = { word, cat, level, desc, takes: [] };
+  const rec = { word, cat, desc, takes: [] };
   await dbPut(rec);
   words.push(rec);
   if (cloudAdmin()) {
     try {
       await saveCatalog([...HANDIT_WORDS.words.filter(w => w.word !== word),
-                         { word, cat, level, gif: null, desc }]);
+                         { word, cat, gif: null, desc }]);
       await HANDIT_WORDS.load();
     } catch (e) { console.warn('単語一覧を更新できませんでした', e); }
   }
@@ -803,7 +821,7 @@ document.getElementById('btn-delete').addEventListener('click', async () => {
   selected = null;
   document.getElementById('target-word').textContent = '単語を選ぶ';
   document.getElementById('target-note').textContent = '左のリストから単語を選ぶか、新しく追加する';
-  ['btn-record', 'btn-resync', 'btn-delete'].forEach(id => document.getElementById(id).disabled = true);
+  ['btn-record', 'btn-resync', 'btn-delete', 'btn-editcat'].forEach(id => document.getElementById(id).disabled = true);
   setSync('単語を選ぶと収録できる', '');
   renderTakes(); renderWords();
   toast('削除した');
@@ -837,6 +855,25 @@ document.getElementById('s-save').addEventListener('click', () => {
   toast(token ? '保存した。次から登録時に学習が走る' : 'リポジトリだけ保存した');
 });
 
+// カテゴリの付け替え
+document.getElementById('btn-editcat').addEventListener('click', async () => {
+  if (!selected) return;
+  const cat = prompt(`「${selected.word}」のカテゴリ`, selected.cat || '未分類');
+  if (cat === null) return;
+  selected.cat = cat.trim() || '未分類';
+  await dbPut(stripRuntime(selected));
+  if (cloudAdmin()) {
+    try {
+      await saveCatalog([...HANDIT_WORDS.words.filter(w => w.word !== selected.word),
+                         { word: selected.word, cat: selected.cat,
+                           gif: selected.gif || null, desc: selected.desc || '' }]);
+      await HANDIT_WORDS.load();
+    } catch (e) { toast('保存できませんでした: ' + e.message, true); return; }
+  }
+  renderWords();
+  toast(`「${selected.word}」を「${selected.cat}」に移した`);
+});
+
 document.getElementById('btn-record').addEventListener('click', record);
 document.getElementById('btn-resync').addEventListener('click', register);
 
@@ -850,7 +887,7 @@ document.getElementById('btn-export').addEventListener('click', async () => {
     featureDim: FEATURE_DIM,
     frames: TARGET_FRAMES,
     words: all.map(w => ({
-      word: w.word, cat: w.cat, level: w.level, desc: w.desc,
+      word: w.word, cat: w.cat, desc: w.desc,
       samples: w.takes.map(t => Array.from(t, v => Math.round(v * 1e5) / 1e5)),
     })),
   };
@@ -873,7 +910,7 @@ document.getElementById('file-import').addEventListener('change', async e => {
     let added = 0;
     for (const w of bundle.words) {
       let rec = words.find(x => x.word === w.word);
-      if (!rec) { rec = { word: w.word, cat: w.cat || '未分類', level: w.level || 1, desc: w.desc || '', takes: [] }; words.push(rec); }
+      if (!rec) { rec = { word: w.word, cat: w.cat || '未分類', desc: w.desc || '', takes: [] }; words.push(rec); }
       delete rec.fromMaster;
       for (const s of w.samples) { rec.takes.push(Float32Array.from(s)); added++; }
       await dbPut(stripRuntime(rec));
@@ -885,7 +922,7 @@ document.getElementById('file-import').addEventListener('change', async e => {
 });
 
 // ===== ユーティリティ =====
-function stripRuntime(w) { return { word: w.word, cat: w.cat, level: w.level, desc: w.desc, takes: w.takes }; }
+function stripRuntime(w) { return { word: w.word, cat: w.cat, desc: w.desc, takes: w.takes }; }
 function unflatten(flat) {
   const out = [];
   for (let i = 0; i < TARGET_FRAMES; i++) out.push(Array.from(flat.subarray(i * FEATURE_DIM, (i + 1) * FEATURE_DIM)));
