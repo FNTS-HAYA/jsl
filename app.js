@@ -8,6 +8,7 @@
 
 import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/features.js';
 import { Recognizer } from './js/recognizer.js';
+import { applyTheme } from './js/rewards.js';
 
 const HOLD_FRAMES   = 15;     // これだけ連続で確信できたら単語を確定
 const FREE_COOLDOWN = 2000;   // 同じ単語が連続で並ぶのを防ぐ
@@ -20,6 +21,7 @@ let holdCount = 0, lastWord = null, lastTime = 0;
 
 // ===== 初期化 =====
 async function init() {
+  applyTheme();                     // XP で選んだ配色
   loading('AIを読み込み中...');
   recognizer = new Recognizer();
   try {

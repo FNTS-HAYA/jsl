@@ -367,6 +367,9 @@ footer p { font-size: 13px; color: var(--ink-3); line-height: 1.8; }
 </footer>
 
 <script type="module">
+import { applyTheme, currentTitle } from './js/rewards.js';
+applyTheme();                       // XP で選んだ配色を全ページで揃える
+
 // ---- 64フレームのストリップ（読み込み時に1回だけ流れる） ----
 const strip = document.getElementById('strip');
 const N = 32;                                   // 見た目の分割数（実際のバッファは64フレーム）

@@ -9,6 +9,39 @@
   <link rel="stylesheet" href="style.css"/>
   <style>
     /* ===== ページタブ ===== */
+    .map-label-note { font-size: 11px; color: var(--ink-3); margin-top: 4px; line-height: 1.5; }
+
+    /* じぶんタブ */
+    .me-wrap { max-width: 600px; margin: 0 auto; padding: 24px 16px 60px; }
+    .me-hero {
+      background: var(--yellow); border-radius: var(--radius);
+      padding: 22px 24px; margin-bottom: 22px;
+    }
+    .me-title { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+    .me-xp { font-size: 44px; font-weight: 900; color: var(--ink); line-height: 1.1; margin-top: 2px; }
+    .me-next { font-size: 13px; color: var(--ink-2); margin-top: 10px; line-height: 1.6; }
+    .me-bar { height: 6px; background: rgba(0,0,0,0.12); border-radius: 99px; margin-top: 8px; overflow: hidden; }
+    .me-bar-fill { height: 100%; background: var(--ink); border-radius: 99px; transition: width 0.5s ease; }
+
+    .me-section { font-size: 15px; font-weight: 800; margin: 26px 0 12px; }
+    .me-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .me-card {
+      background: var(--white); border: 2px solid var(--line); border-radius: 14px;
+      padding: 13px 14px; cursor: pointer; text-align: left;
+      font-family: inherit; transition: border-color 0.15s, transform 0.1s;
+    }
+    .me-card:hover:not(.locked) { transform: translateY(-2px); }
+    .me-card.on { border-color: var(--yellow-d); background: var(--yellow-l); }
+    .me-card.locked { opacity: 0.5; cursor: not-allowed; }
+    .me-card-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+    .me-card-sub  { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+    .me-swatch { display: flex; gap: 4px; margin-bottom: 9px; }
+    .me-swatch span { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid rgba(0,0,0,0.12); }
+    .me-badge {
+      display: inline-block; background: var(--yellow); color: var(--ink);
+      font-size: 12px; font-weight: 700; border-radius: 99px; padding: 3px 12px;
+    }
+
     .page-tabs {
       display: flex; gap: 4px; border-bottom: 1px solid var(--line);
       background: rgba(250,250,250,0.9); backdrop-filter: blur(20px);
@@ -401,13 +434,14 @@
 <div class="page-tabs" id="page-tabs-bar">
   <button class="page-tab active" data-page="map">📚 学習マップ</button>
   <button class="page-tab"        data-page="dict">📖 手話図鑑</button>
+  <button class="page-tab"        data-page="me">🏅 じぶん</button>
 </div>
 
 <!-- ===== 学習マップ ===== -->
 <div class="page-content active" id="page-map">
   <div class="map-wrap">
     <div class="map-title">📚 学習マップ</div>
-    <div class="map-subtitle">レベルをクリアして手話をマスターしよう</div>
+    <div class="map-subtitle">好きなカテゴリから始められます</div>
     <div id="level-map"></div>
   </div>
 </div>
@@ -417,6 +451,24 @@
   <div class="dict-wrap">
     <div class="dict-tabs" id="dict-tabs"></div>
     <div class="dict-grid" id="dict-grid"></div>
+  </div>
+</div>
+
+<!-- ===== じぶん ===== -->
+<div class="page-content" id="page-me">
+  <div class="me-wrap">
+    <div class="me-hero">
+      <div class="me-title">たまったXP</div>
+      <div class="me-xp" id="me-xp">0</div>
+      <div class="me-next" id="me-next"></div>
+      <div class="me-bar"><div class="me-bar-fill" id="me-bar"></div></div>
+    </div>
+
+    <div class="me-section">🏅 称号</div>
+    <div class="me-grid" id="me-titles"></div>
+
+    <div class="me-section">🎨 テーマ</div>
+    <div class="me-grid" id="me-themes"></div>
   </div>
 </div>
 
@@ -525,8 +577,10 @@
 import HANDIT_WORDS from './words.js';
 import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/features.js';
 import { Recognizer } from './js/recognizer.js';
+import * as Rewards from './js/rewards.js';
 
 // 単語とレベルは words.js が唯一の置き場所。追加はあちらで行う。
+Rewards.applyTheme();               // XP で選んだ配色を先に当てる
 await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行く
 const LEVELS     = HANDIT_WORDS.levels;
 const DICTIONARY = HANDIT_WORDS.dictionary;
@@ -598,6 +652,9 @@ async function syncFromFirestore(user){
       const data=snap.data();
       localStorage.setItem('handit_xp', String(data.xp||0));
       localStorage.setItem('handit_cleared', JSON.stringify(data.cleared||[]));
+      if(data.theme) localStorage.setItem('handit_theme', data.theme);
+      if(data.title) localStorage.setItem('handit_title', data.title);
+      Rewards.applyTheme();
     } else {
       await fsSetDoc(ref,{
         xp:parseInt(localStorage.getItem('handit_xp')||'0'),
@@ -704,7 +761,7 @@ function openProfileModal(){
   document.getElementById('profile-cleared-count').textContent=`${cleared.length} / ${LEVELS.length}`;
   document.getElementById('profile-levels').innerHTML=LEVELS.map(lv=>{
     const isCleared=cleared.includes(lv.id);
-    return `<div class="profile-level-row ${isCleared?'cleared':''}"><span>${isCleared?'✅':'⬜'}</span><span>Lv.${lv.id} ${lv.title}</span></div>`;
+    return `<div class="profile-level-row ${isCleared?'cleared':''}"><span>${isCleared?'✅':'⬜'}</span><span>${lv.title}</span></div>`;
   }).join('');
   document.getElementById('profile-modal').classList.remove('hidden');
 }
@@ -723,6 +780,7 @@ document.querySelectorAll('.page-tab').forEach(btn => {
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('page-' + btn.dataset.page).classList.add('active');
+    if (btn.dataset.page === 'me') buildMe();
   });
 });
 
@@ -743,10 +801,13 @@ function buildLevelList() {
   map.innerHTML='';
   LEVELS.forEach((level,i)=>{
     const isCleared=cleared.includes(level.id);
-    const isAvailable=i===0||cleared.includes(LEVELS[i-1].id);
-    const hasWords=level.words.every(w=>labels.includes(w));
-    const canPlay=isAvailable&&hasWords;
+    // 順番の縛りは無くした。どのカテゴリからでも始められる。
+    // AI がまだ判定できない単語は、レッスンから外して札で知らせる。
+    const ready=level.words.filter(w=>labels.includes(w));
+    const notReady=level.words.filter(w=>!labels.includes(w));
+    const canPlay=ready.length>0;
     const isRight=i%2===1;
+
     const wrap=document.createElement('div');
     wrap.className='map-node-wrap';
     if(i>0){
@@ -757,20 +818,112 @@ function buildLevelList() {
     const node=document.createElement('div');
     node.className='map-node'+(isRight?' right':'')+(canPlay?'':' locked');
     const state=isCleared?'cleared':canPlay?'available':'locked';
-    const badge=isCleared?'✅ クリア済み':canPlay?'スタート':'🔒 ロック中';
+    const badge=isCleared?'✅ クリア済み':canPlay?'スタート':'AI準備中';
     const bc=isCleared?'cleared-badge':canPlay?'':'locked-badge';
+    const note=notReady.length&&canPlay
+      ? `<div class="map-label-note">${notReady.join(' · ')} はAIがまだ判定できません</div>` : '';
     node.innerHTML=`
       <div class="map-circle ${state}">${level.icon}${isCleared?'<div class="map-stars">⭐</div>':''}</div>
       <div class="map-label">
-        <div class="map-label-title">Lv.${level.id} ${level.title}</div>
+        <div class="map-label-title">${level.title}</div>
         <div class="map-label-words">${level.words.join(' · ')}</div>
+        ${note}
         <span class="map-label-badge ${bc}">${badge}</span>
       </div>`;
-    if(canPlay) node.addEventListener('click',()=>startLesson(level));
+    if(canPlay) node.addEventListener('click',()=>startLesson(level,ready));
     wrap.appendChild(node);
     map.appendChild(wrap);
   });
 }
+
+// ===== じぶんタブ（XPの使い道） =====
+function buildMe(){
+  const xp=Rewards.getXP();
+  showTitleBadge();
+  document.getElementById('me-xp').textContent=xp.toLocaleString();
+
+  // 次の解放まであとどれくらいか
+  const next=Rewards.nextUnlock(xp);
+  const nextEl=document.getElementById('me-next');
+  const bar=document.getElementById('me-bar');
+  if(next){
+    const prev=[...Rewards.THEMES,...Rewards.TITLES]
+      .map(t=>t.xp).filter(v=>v<=xp).sort((a,b)=>b-a)[0]||0;
+    const pct=Math.max(0,Math.min(100,(xp-prev)/(next.xp-prev)*100));
+    nextEl.textContent=`あと ${next.xp-xp} XP で ${next.kind}「${next.name}」`;
+    bar.style.width=pct+'%';
+  }else{
+    nextEl.textContent='すべて解放しました';
+    bar.style.width='100%';
+  }
+
+  // 称号
+  const cur=Rewards.currentTitle(xp);
+  const tw=document.getElementById('me-titles');
+  tw.innerHTML='';
+  Rewards.TITLES.forEach(t=>{
+    const open=xp>=t.xp;
+    const b=document.createElement('button');
+    b.className='me-card'+(open?'':' locked')+(t.id===cur.id?' on':'');
+    b.innerHTML=`<div class="me-card-name">${t.name}</div>
+      <div class="me-card-sub">${open?(t.id===cur.id?'使用中':'えらぶ'):`${t.xp} XP で解放`}</div>`;
+    if(open) b.addEventListener('click',()=>{Rewards.setTitle(t.id);buildMe();syncRewards();});
+    tw.appendChild(b);
+  });
+
+  // テーマ
+  const curTh=Rewards.currentTheme(xp);
+  const thw=document.getElementById('me-themes');
+  thw.innerHTML='';
+  Rewards.THEMES.forEach(t=>{
+    const open=xp>=t.xp;
+    const b=document.createElement('button');
+    b.className='me-card'+(open?'':' locked')+(t.id===curTh.id?' on':'');
+    b.innerHTML=`<div class="me-swatch">${t.swatch.map(c=>`<span style="background:${c}"></span>`).join('')}</div>
+      <div class="me-card-name">${t.name}</div>
+      <div class="me-card-sub">${open?(t.id===curTh.id?'使用中':'えらぶ'):`${t.xp} XP で解放`}</div>`;
+    if(open) b.addEventListener('click',()=>{Rewards.setTheme(t.id);buildMe();syncRewards();});
+    thw.appendChild(b);
+  });
+}
+
+// ヘッダーのメールアドレスの横に称号を出す
+function showTitleBadge(){
+  const el=document.getElementById('auth-email');
+  if(!el) return;
+  let b=document.getElementById('title-badge');
+  if(!b){
+    b=document.createElement('span');
+    b.id='title-badge'; b.className='me-badge';
+    b.style.marginRight='8px';
+    el.parentNode.insertBefore(b,el);
+  }
+  b.textContent=Rewards.currentTitle().name;
+}
+
+// 選んだ見た目もアカウントに残す
+async function syncRewards(){
+  if(!currentUser||!db) return;
+  try{
+    await fsSetDoc(fsDoc(db,'users',currentUser.uid),{
+      xp:Rewards.getXP(),
+      cleared:getClearedLevels(),
+      theme:Rewards.currentTheme().id,
+      title:Rewards.currentTitle().id,
+      updatedAt:fsServerTimestamp()
+    },{merge:true});
+  }catch(e){ console.error('見た目の保存に失敗:',e); }
+}
+
+// コンソールから確認するための窓口
+//   handit.buildMe()      … じぶんタブを描き直す
+//   handit.rewards        … テーマと称号の定義
+//   handit.setXP(1000)    … XPを手で入れて描き直す（動作確認用）
+window.handit = {
+  buildMe,
+  rewards: Rewards,
+  setXP(n){ localStorage.setItem('handit_xp', String(n)); buildMe(); return n; },
+};
 
 // ===== 図鑑構築 =====
 const DICT_CATS = ['すべて', ...new Set(DICTIONARY.map(d=>d.cat))];
@@ -931,10 +1084,11 @@ async function runInfer(){
 }
 
 // ===== レッスン =====
-async function startLesson(level){
+async function startLesson(level,ready){
+  const words=(ready&&ready.length)?ready:level.words.filter(w=>labels.includes(w));
   currentLevel=level;currentPhase=PHASE.LEARN;correctCount=0;answered=false;holdCount=0;
-  learnQueue=[...level.words];
-  reviewQueue=[...level.words,...level.words].sort(()=>Math.random()-0.5);
+  learnQueue=[...words];
+  reviewQueue=[...words,...words].sort(()=>Math.random()-0.5);
   currentIdx=0;
   showView('view-lesson');
   await startCam();
@@ -1016,6 +1170,7 @@ async function endLesson(){
       },{merge:true});
     }catch(e){ console.error('Firestore保存エラー:',e); }
   }
+  buildMe();                     // 新しく解放されたものを反映
   document.getElementById('c-correct').textContent=correctCount;
   document.getElementById('c-xp').textContent='+'+xp;
   document.getElementById('complete-sub').textContent=`復習テスト ${reviewQueue.length}問中${correctCount}問正解！`;

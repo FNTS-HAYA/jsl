@@ -139,6 +139,8 @@
 
 <script type="module">
 import HANDIT_WORDS from './words.js';
+import { applyTheme } from './js/rewards.js';
+applyTheme();
 
 // 単語は words.js が唯一の置き場所
 await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行く
