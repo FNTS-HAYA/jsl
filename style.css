@@ -294,3 +294,8 @@ body {
 .hand-opt-icon { font-size: 40px; line-height: 1.1; }
 .hand-opt-name { font-size: 15px; font-weight: 800; }
 .hand-opt-sub  { font-size: 11px; color: var(--ink-3); }
+
+/* お手本（js/media.js）。どの枠に入れても枠いっぱいに出す */
+.ref-fill { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ref-ph { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #555; font-size: 12px; }
+.ref-ph span:first-child { font-size: 28px; }

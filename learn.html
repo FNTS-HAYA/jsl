@@ -104,6 +104,51 @@
     .map-label-badge.locked-badge  { background: #F0F0F0; color: var(--ink-3); border-color: var(--line); }
     .map-label-badge.cleared-badge { background: var(--green-l); color: var(--green-d); border-color: var(--green); }
 
+    /* ===== えらんで練習 ===== */
+    .pick-entry {
+      width: 100%; display: flex; align-items: center; gap: 14px;
+      background: var(--white); border: 2px dashed var(--yellow-d); border-radius: 16px;
+      padding: 14px 16px; margin-bottom: 22px; cursor: pointer; font-family: inherit; text-align: left;
+      transition: transform 0.1s, background 0.15s;
+    }
+    .pick-entry:hover { background: var(--yellow-l); transform: translateY(-2px); }
+    .pick-entry-icon { font-size: 30px; }
+    .pick-entry-title { font-size: 15px; font-weight: 800; color: var(--ink); }
+    .pick-entry-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+    .dict-modal.pick-modal { max-width: 560px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
+    .pick-head { padding: 20px 22px 10px; }
+    .pick-title { font-size: 20px; font-weight: 900; }
+    .pick-sub { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+    .pick-body { padding: 4px 22px 10px; overflow-y: auto; flex: 1; }
+    .pick-cat { margin-top: 14px; }
+    .pick-cat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .pick-cat-name { font-size: 13px; font-weight: 800; color: var(--ink-2); }
+    .pick-cat-all {
+      font-size: 12px; font-weight: 700; color: var(--ink-3); background: none;
+      border: 1.5px solid var(--line); border-radius: 99px; padding: 3px 10px; cursor: pointer; font-family: inherit;
+    }
+    .pick-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pick-chip {
+      font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer;
+      padding: 7px 14px; border-radius: 99px;
+      background: var(--white); border: 1.5px solid var(--line); color: var(--ink);
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .pick-chip.on { background: var(--yellow); border-color: var(--yellow-d); }
+    .pick-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pick-foot { padding: 12px 22px 18px; border-top: 1px solid var(--line); }
+    .pick-mode { display: flex; gap: 4px; background: var(--bg); border-radius: 99px; padding: 4px; margin-bottom: 12px; }
+    .pick-mode button {
+      flex: 1; padding: 8px; border: none; background: none; border-radius: 99px; font-family: inherit;
+      font-size: 13px; font-weight: 700; color: var(--ink-3); cursor: pointer;
+    }
+    .pick-mode button.on { background: var(--white); color: var(--ink); box-shadow: var(--shadow); }
+    .pick-start:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pick-row { display: flex; gap: 8px; }
+    .pick-row .dict-modal-close { width: auto; flex: 0 0 auto; padding: 12px 18px; }
+    .pick-row .auth-submit { margin-bottom: 0; flex: 1; }
+
     /* ===== PCマップ: 2カラム ===== */
     @media (min-width: 700px) {
       #level-map {
@@ -148,7 +193,7 @@
       display: flex; align-items: center; justify-content: center;
       position: relative; overflow: hidden;
     }
-    .dict-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ref-slot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
     .dict-thumb-ph { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #444; }
     .dict-thumb-ph span:first-child { font-size: 28px; }
     .dict-thumb-ph span:last-child  { font-size: 11px; }
@@ -376,6 +421,27 @@
   </div>
 </div>
 
+<!-- えらんで練習モーダル -->
+<div class="dict-modal-overlay hidden" id="pick-modal">
+  <div class="dict-modal pick-modal">
+    <div class="pick-head">
+      <div class="pick-title">🎯 単語をえらんで練習</div>
+      <div class="pick-sub">練習したい単語をタップしてください</div>
+    </div>
+    <div class="pick-body" id="pick-body"></div>
+    <div class="pick-foot">
+      <div class="pick-mode" id="pick-mode">
+        <button data-mode="learn" class="on">お手本つきで練習 → 復習</button>
+        <button data-mode="test">テストだけ</button>
+      </div>
+      <div class="pick-row">
+        <button class="dict-modal-close" id="pick-close">閉じる</button>
+        <button class="auth-submit pick-start" id="pick-start" disabled>えらんでください</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 認証モーダル -->
 <div class="dict-modal-overlay hidden" id="auth-modal">
   <div class="dict-modal">
@@ -453,6 +519,13 @@
   <div class="map-wrap">
     <div class="map-title">📚 学習マップ</div>
     <div class="map-subtitle">好きなカテゴリから始められます</div>
+    <button class="pick-entry" id="pick-open">
+      <span class="pick-entry-icon">🎯</span>
+      <span>
+        <div class="pick-entry-title">単語をえらんで練習</div>
+        <div class="pick-entry-sub" id="pick-entry-sub">全カテゴリから好きな単語だけを集めて練習できます</div>
+      </span>
+    </button>
     <div id="level-map"></div>
   </div>
 </div>
@@ -520,11 +593,7 @@
     <!-- PC: 横並び -->
     <div class="lesson-media">
       <div class="video-space" id="video-space-pc">
-        <video id="ref-video-pc" class="ref-media" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
-        <div class="video-placeholder" id="video-placeholder-pc">
-          <div class="video-placeholder-icon">🎬</div>
-          <div class="video-placeholder-text">参考動画</div>
-        </div>
+        <div class="ref-slot" id="ref-slot-pc"></div>
       </div>
       <div class="camera-wrap">
         <video id="video-lesson" autoplay playsinline muted></video>
@@ -546,11 +615,7 @@
       </div>
       <div class="media-tab-content" id="tab-video">
         <div class="video-space" id="video-space-sp" style="border-radius:0;border:none;aspect-ratio:4/3;">
-          <video id="ref-video-sp" class="ref-media" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
-          <div class="video-placeholder" id="video-placeholder-sp">
-            <div class="video-placeholder-icon">🎬</div>
-            <div class="video-placeholder-text">参考動画</div>
-          </div>
+          <div class="ref-slot" id="ref-slot-sp"></div>
         </div>
       </div>
     </div>
@@ -596,6 +661,12 @@ import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/feature
 import { Recognizer } from './js/recognizer.js';
 import * as Rewards from './js/rewards.js';
 import * as Prefs from './js/prefs.js';
+import { renderRef } from './js/media.js';
+
+const LESSON_PH='<div class="video-placeholder"><div class="video-placeholder-icon">🎬</div><div class="video-placeholder-text">お手本準備中</div></div>';
+const TEST_PH  ='<div class="video-placeholder"><div class="video-placeholder-icon">🙈</div><div class="video-placeholder-text">テスト中はお手本なし</div></div>';
+const DICT_PH  ='<div class="dict-thumb-ph"><span>🤟</span><span>準備中</span></div>';
+const MODAL_PH ='<div class="dict-modal-ph"><span style="font-size:40px;">🤟</span><span>お手本準備中</span></div>';
 import { coachCard, coachSpot, coachEnd, coachActive } from './js/coach.js';
 
 // 単語とレベルは words.js が唯一の置き場所。追加はあちらで行う。
@@ -1001,6 +1072,68 @@ window.handit = {
   setXP(n){ localStorage.setItem('handit_xp', String(n)); buildMe(); return n; },
 };
 
+// ===== えらんで練習 =====
+const PICK_KEY='handit_custom_words';
+let picked=new Set(), pickMode='learn';
+function loadPicked(){ try{ return new Set(JSON.parse(localStorage.getItem(PICK_KEY)||'[]')); }catch{ return new Set(); } }
+function savePicked(){ try{ localStorage.setItem(PICK_KEY,JSON.stringify([...picked])); }catch{} }
+
+function openPicker(){
+  picked=new Set([...loadPicked()].filter(w=>labels.includes(w)));
+  buildPicker();
+  document.getElementById('pick-modal').classList.remove('hidden');
+}
+function closePicker(){ document.getElementById('pick-modal').classList.add('hidden'); }
+
+function buildPicker(){
+  const body=document.getElementById('pick-body');
+  body.innerHTML='';
+  LEVELS.forEach(level=>{
+    const ready=level.words.filter(w=>labels.includes(w));
+    const sec=document.createElement('div');
+    sec.className='pick-cat';
+    const allOn=ready.length&&ready.every(w=>picked.has(w));
+    sec.innerHTML=`<div class="pick-cat-head">
+        <span class="pick-cat-name">${level.icon} ${level.title}</span>
+        ${ready.length?`<button class="pick-cat-all">${allOn?'全部はずす':'全部えらぶ'}</button>`:''}
+      </div><div class="pick-chips"></div>`;
+    const chips=sec.querySelector('.pick-chips');
+    level.words.forEach(w=>{
+      const ok=labels.includes(w);
+      const c=document.createElement('button');
+      c.className='pick-chip'+(picked.has(w)?' on':'');
+      c.textContent=w; c.disabled=!ok;
+      if(!ok) c.title='AIがまだ判定できません';
+      c.addEventListener('click',()=>{ picked.has(w)?picked.delete(w):picked.add(w); buildPicker(); });
+      chips.appendChild(c);
+    });
+    const all=sec.querySelector('.pick-cat-all');
+    if(all) all.addEventListener('click',()=>{ ready.forEach(w=>allOn?picked.delete(w):picked.add(w)); buildPicker(); });
+    body.appendChild(sec);
+  });
+  const btn=document.getElementById('pick-start');
+  btn.disabled=picked.size===0;
+  btn.textContent=picked.size?`${picked.size}語で始める`:'えらんでください';
+}
+
+document.getElementById('pick-open').addEventListener('click',openPicker);
+document.getElementById('pick-close').addEventListener('click',closePicker);
+document.getElementById('pick-modal').addEventListener('click',function(e){ if(e.target===this) closePicker(); });
+document.querySelectorAll('#pick-mode button').forEach(b=>b.addEventListener('click',()=>{
+  pickMode=b.dataset.mode;
+  document.querySelectorAll('#pick-mode button').forEach(x=>x.classList.toggle('on',x===b));
+}));
+document.getElementById('pick-start').addEventListener('click',()=>{
+  if(!picked.size) return;
+  savePicked();
+  // 図鑑と同じ順（カテゴリ順）に並べる
+  const order=LEVELS.flatMap(l=>l.words);
+  const words=[...picked].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  const testOnly=pickMode==='test';
+  closePicker();
+  startLesson({ id:'custom', title:'えらんだ単語', icon:'🎯', words, custom:true, testOnly }, words, { testOnly });
+});
+
 // ===== 図鑑構築 =====
 const DICT_CATS = ['すべて', ...new Set(DICTIONARY.map(d=>d.cat))];
 let currentDictCat = 'すべて';
@@ -1029,15 +1162,12 @@ function buildDictGrid() {
     const card=document.createElement('div');
     card.className='dict-card';
     card.innerHTML=`
-      <div class="dict-thumb">
-        ${item.gif
-          ?`<img class="ref-media" src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
-          :`<div class="dict-thumb-ph"><span>🤟</span><span>準備中</span></div>`}
-      </div>
+      <div class="dict-thumb"></div>
       <div class="dict-card-body">
         <div class="dict-word">${item.word}</div>
         <div class="dict-cat">${item.cat}</div>
       </div>`;
+    renderRef(card.querySelector('.dict-thumb'), item, { lazy:true, placeholder:DICT_PH });
     card.addEventListener('click',()=>openDictModal(item));
     grid.appendChild(card);
   });
@@ -1048,9 +1178,7 @@ function openDictModal(item) {
   document.getElementById('modal-cat').textContent=item.cat;
   document.getElementById('modal-desc').textContent=Prefs.handText(item.desc)||'説明準備中';
   const wrap=document.getElementById('modal-video-wrap');
-  wrap.innerHTML=item.gif
-    ?`<img class="ref-media" src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
-    :`<div class="dict-modal-ph"><span style="font-size:40px;">🤟</span><span>GIF準備中</span></div>`;
+  renderRef(wrap, item, { placeholder:MODAL_PH, controls:true });
   document.getElementById('dict-modal').classList.remove('hidden');
 }
 
@@ -1161,12 +1289,16 @@ async function runInfer(){
 }
 
 // ===== レッスン =====
-async function startLesson(level,ready){
+async function startLesson(level,ready,opts={}){
   const words=(ready&&ready.length)?ready:level.words.filter(w=>labels.includes(w));
-  currentLevel=level;currentPhase=PHASE.LEARN;correctCount=0;answered=false;holdCount=0;
+  currentLevel=level;correctCount=0;answered=false;holdCount=0;
+  currentPhase=opts.testOnly?PHASE.REVIEW:PHASE.LEARN;
   learnQueue=[...words];
-  reviewQueue=[...words,...words].sort(()=>Math.random()-0.5);
+  // 復習は各単語2回。えらんだ単語が多いときは1回ずつにして長くなりすぎないようにする
+  const reps=level.custom&&words.length>5?1:2;
+  reviewQueue=Array.from({length:reps},()=>words).flat().sort(()=>Math.random()-0.5);
   currentIdx=0;
+  document.getElementById('ls-prompt-label').textContent=opts.testOnly?'テスト':'この手話をやってみよう';
   showView('view-lesson');
   await startCam();
   nextChallenge();
@@ -1190,37 +1322,15 @@ function nextChallenge(){
   document.getElementById('lesson-conf').textContent='';
   document.getElementById('hold-fill').style.width='0%';
   document.getElementById('ls-progress').style.width=(currentIdx/(currentPhase===PHASE.LEARN?learnQueue.length:reviewQueue.length)*100)+'%';
-  document.getElementById('ls-phase-label').textContent=currentPhase===PHASE.LEARN?'学習':'復習';
-  // 参考動画更新
-  const src=currentLevel.videos&&currentLevel.videos[currentChallenge];
+  document.getElementById('ls-phase-label').textContent=currentPhase===PHASE.LEARN?'学習':(currentLevel&&currentLevel.testOnly?'テスト':'復習');
+  // お手本（図鑑と同じものを js/media.js で出す）
+  const item=HANDIT_WORDS.find(currentChallenge)||{word:currentChallenge};
+  // 「テストだけ」のときはお手本を隠す
+  const hide=currentLevel&&currentLevel.testOnly;
   ['pc','sp'].forEach(suffix=>{
-    const rv=document.getElementById('ref-video-'+suffix);
-    const ph=document.getElementById('video-placeholder-'+suffix);
-    if(src){
-      // GIFの場合はimgタグに差し替え
-      if(src.endsWith('.gif')){
-        const container=rv.parentElement;
-        if(!container.querySelector('img.ref-gif')){
-          const img=document.createElement('img');
-          img.className='ref-gif ref-media';
-          img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;position:absolute;top:0;left:0;';
-          container.appendChild(img);
-        }
-        const img=container.querySelector('img.ref-gif');
-        img.src=src; img.style.display='block';
-        rv.style.display='none';
-      } else {
-        rv.src=src;rv.style.display='block';rv.load();
-        const img=rv.parentElement.querySelector('img.ref-gif');
-        if(img)img.style.display='none';
-      }
-      if(ph)ph.style.display='none';
-    } else {
-      rv.style.display='none';
-      const img=rv.parentElement&&rv.parentElement.querySelector('img.ref-gif');
-      if(img)img.style.display='none';
-      if(ph)ph.style.display='flex';
-    }
+    const slot=document.getElementById('ref-slot-'+suffix);
+    if(hide) slot.innerHTML=TEST_PH;
+    else renderRef(slot, item, { placeholder:LESSON_PH, controls:true });
   });
   currentIdx++;
 }
@@ -1235,7 +1345,7 @@ function showFeedback(correct){
 async function endLesson(){
   stopCam();
   const xp=correctCount*10;
-  if(currentLevel)setClearedLevel(currentLevel.id);
+  if(currentLevel&&!currentLevel.custom)setClearedLevel(currentLevel.id);   // えらんで練習はクリア扱いにしない
   const stored=parseInt(localStorage.getItem('handit_xp')||'0');
   const newXp=stored+xp;
   localStorage.setItem('handit_xp',newXp);
@@ -1251,7 +1361,7 @@ async function endLesson(){
   buildMe();                     // 新しく解放されたものを反映
   document.getElementById('c-correct').textContent=correctCount;
   document.getElementById('c-xp').textContent='+'+xp;
-  document.getElementById('complete-sub').textContent=`復習テスト ${reviewQueue.length}問中${correctCount}問正解！`;
+  document.getElementById('complete-sub').textContent=`${currentLevel&&currentLevel.custom?'えらんだ単語':'復習テスト'} ${reviewQueue.length}問中${correctCount}問正解！`;
   showView('view-complete');
 }
 

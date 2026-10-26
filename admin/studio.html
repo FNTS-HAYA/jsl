@@ -623,6 +623,20 @@ function setSync(msg, cls) {
   document.getElementById('sync-msg').textContent = msg;
 }
 
+// 単語一覧の1件を更新した新しい一覧を返す。
+// スタジオの収録データは gif を持っていないので、一覧に既にある gif は必ず引き継ぐ
+// （以前はここで gif が null に上書きされ、収録し直すたびにお手本が消えていた）。
+function upsertCatalog({ word, cat, desc }) {
+  const prev = HANDIT_WORDS.find(word) || {};
+  const rest = HANDIT_WORDS.words.filter(w => w.word !== word);
+  return [...rest, {
+    word,
+    cat:  cat  || prev.cat || '未分類',
+    gif:  prev.gif || null,
+    desc: desc || prev.desc || '',
+  }];
+}
+
 async function autoSync(word) {
   if (word.takes.length < MIN_TAKES) {
     setSync(`あと${MIN_TAKES - word.takes.length}テイクで自動的に組み込まれる`, '');
@@ -640,10 +654,7 @@ async function autoSync(word) {
     await recognizer.registerPrototype(word.word, word.takes.map(unflatten));
 
     if (cloudAdmin()) {
-      const list = HANDIT_WORDS.words.filter(w => w.word !== word.word);
-      list.push({ word: word.word, cat: word.cat,
-                  gif: word.gif || null, desc: word.desc || '' });
-      await saveCatalog(list);
+      await saveCatalog(upsertCatalog({ word: word.word, cat: word.cat, desc: word.desc }));
       await HANDIT_WORDS.load();
       setSync(`「${word.word}」を組み込んだ。サイトを開けばもう使える`, 'ok');
     } else {
@@ -803,8 +814,7 @@ document.getElementById('f-save').addEventListener('click', async () => {
   words.push(rec);
   if (cloudAdmin()) {
     try {
-      await saveCatalog([...HANDIT_WORDS.words.filter(w => w.word !== word),
-                         { word, cat, gif: null, desc }]);
+      await saveCatalog(upsertCatalog({ word, cat, desc }));
       await HANDIT_WORDS.load();
     } catch (e) { console.warn('単語一覧を更新できませんでした', e); }
   }
@@ -864,9 +874,7 @@ document.getElementById('btn-editcat').addEventListener('click', async () => {
   await dbPut(stripRuntime(selected));
   if (cloudAdmin()) {
     try {
-      await saveCatalog([...HANDIT_WORDS.words.filter(w => w.word !== selected.word),
-                         { word: selected.word, cat: selected.cat,
-                           gif: selected.gif || null, desc: selected.desc || '' }]);
+      await saveCatalog(upsertCatalog({ word: selected.word, cat: selected.cat, desc: selected.desc }));
       await HANDIT_WORDS.load();
     } catch (e) { toast('保存できませんでした: ' + e.message, true); return; }
   }
