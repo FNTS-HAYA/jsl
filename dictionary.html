@@ -140,7 +140,9 @@
 <script type="module">
 import HANDIT_WORDS from './words.js';
 import { applyTheme } from './js/rewards.js';
+import { applyHand, handText } from './js/prefs.js';
 applyTheme();
+applyHand();
 
 // 単語は words.js が唯一の置き場所
 await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行く
@@ -178,7 +180,7 @@ function buildGrid() {
     card.innerHTML = `
       <div class="dict-thumb">
         ${item.gif
-          ? `<img src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+          ? `<img class="ref-media" src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
           : `<div class="dict-thumb-placeholder"><div class="dict-thumb-placeholder-icon">🤟</div><div class="dict-thumb-placeholder-text">お手本を準備中</div></div>`
         }
       </div>
@@ -196,11 +198,11 @@ function buildGrid() {
 function openModal(item) {
   document.getElementById('modal-word').textContent = item.word;
   document.getElementById('modal-cat').textContent  = item.cat;
-  document.getElementById('modal-desc').textContent = item.desc || '説明準備中';
+  document.getElementById('modal-desc').textContent = handText(item.desc) || '説明準備中';
 
   const wrap = document.getElementById('modal-video-wrap');
   if (item.gif) {
-    wrap.innerHTML = `<img src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`;
+    wrap.innerHTML = `<img class="ref-media" src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`;
   } else {
     wrap.innerHTML = `<div class="dict-modal-video-placeholder"><span style="font-size:40px;">🤟</span><span>お手本を準備中</span></div>`;
   }

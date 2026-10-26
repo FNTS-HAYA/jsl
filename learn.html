@@ -236,11 +236,22 @@
     .lesson-media .video-space { position: relative; }
     .lesson-media .video-space::after {
       content: '🎬 お手本';
+      content: var(--ref-label, '🎬 お手本');
       position: absolute; top: 10px; left: 10px; z-index: 2;
       font-size: 11px; font-weight: 700; color: white;
       background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
       padding: 4px 10px; border-radius: 99px;
     }
+
+    :root[data-hand="left"] .lesson-media .video-space { --ref-label: '🎬 お手本（左きき用に反転）'; }
+    .me-hand-grid { grid-template-columns: 1fr 1fr; }
+    .me-card-icon { font-size: 26px; line-height: 1.2; margin-bottom: 4px; }
+    .me-retut {
+      margin-top: 26px; width: 100%; padding: 12px; font-family: inherit;
+      background: none; border: 1.5px dashed var(--line); border-radius: 14px;
+      font-size: 13px; font-weight: 700; color: var(--ink-3); cursor: pointer;
+    }
+    .me-retut:hover { border-color: var(--ink-3); color: var(--ink); }
 
     /* スマホ: タブで切り替え */
     .media-tabs {
@@ -469,6 +480,12 @@
 
     <div class="me-section">🎨 テーマ</div>
     <div class="me-grid" id="me-themes"></div>
+
+    <div class="me-section">✋ 利き手</div>
+    <div class="me-grid me-hand-grid" id="me-hand"></div>
+    <div class="map-label-note" style="margin-top:8px;">左ききにすると、お手本が左右反転して表示されます。AIの判定はどちらの手でも同じです。</div>
+
+    <button class="me-retut" id="me-retut">👀 チュートリアルをもう一度見る</button>
   </div>
 </div>
 
@@ -503,7 +520,7 @@
     <!-- PC: 横並び -->
     <div class="lesson-media">
       <div class="video-space" id="video-space-pc">
-        <video id="ref-video-pc" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+        <video id="ref-video-pc" class="ref-media" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
         <div class="video-placeholder" id="video-placeholder-pc">
           <div class="video-placeholder-icon">🎬</div>
           <div class="video-placeholder-text">参考動画</div>
@@ -529,7 +546,7 @@
       </div>
       <div class="media-tab-content" id="tab-video">
         <div class="video-space" id="video-space-sp" style="border-radius:0;border:none;aspect-ratio:4/3;">
-          <video id="ref-video-sp" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+          <video id="ref-video-sp" class="ref-media" controls style="display:none;width:100%;height:100%;object-fit:cover;"></video>
           <div class="video-placeholder" id="video-placeholder-sp">
             <div class="video-placeholder-icon">🎬</div>
             <div class="video-placeholder-text">参考動画</div>
@@ -578,9 +595,12 @@ import HANDIT_WORDS from './words.js';
 import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/features.js';
 import { Recognizer } from './js/recognizer.js';
 import * as Rewards from './js/rewards.js';
+import * as Prefs from './js/prefs.js';
+import { coachCard, coachSpot, coachEnd, coachActive } from './js/coach.js';
 
 // 単語とレベルは words.js が唯一の置き場所。追加はあちらで行う。
 Rewards.applyTheme();               // XP で選んだ配色を先に当てる
+Prefs.applyHand();                  // 左ききならお手本を反転
 await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行く
 const LEVELS     = HANDIT_WORDS.groups;   // カテゴリごとのまとまり
 const DICTIONARY = HANDIT_WORDS.dictionary;
@@ -624,25 +644,33 @@ async function initFirebase(){
 
     let authInitialized=false;
     authMod.onAuthStateChanged(auth, async (user)=>{
-      const wasInitialized=authInitialized;
-      authInitialized=true;
-      currentUser=user;
-      updateAuthUI();
-      if(user){
-        await syncFromFirestore(user);
-        if(labels.length) buildLevelList();
-      } else if(wasInitialized){
-        // 実際にログアウトした場合のみ、直前のアカウントの進捗をゲスト状態にリセットする
-        // （初回チェックで元々未ログインだっただけの場合はゲストの進捗を消さない）
-        localStorage.setItem('handit_xp','0');
-        localStorage.setItem('handit_cleared','[]');
-        if(labels.length) buildLevelList();
-      }
+      try{ await onAuthChanged(user, authInitialized); } finally { authInitialized=true; resolveAuthReady(); }
     });
   }catch(e){
     console.error('Firebase初期化エラー:',e);
+    resolveAuthReady();
   }
 }
+
+async function onAuthChanged(user, wasInitialized){
+  currentUser=user;
+  updateAuthUI();
+  if(user){
+    await syncFromFirestore(user);
+    if(labels.length) buildLevelList();
+  } else if(wasInitialized){
+    // 実際にログアウトした場合のみ、直前のアカウントの進捗をゲスト状態にリセットする
+    // （初回チェックで元々未ログインだっただけの場合はゲストの進捗を消さない）
+    // 利き手は端末の設定として残す
+    localStorage.setItem('handit_xp','0');
+    localStorage.setItem('handit_cleared','[]');
+    if(labels.length) buildLevelList();
+  }
+}
+
+// 最初のログイン判定が済むまで待つ（チュートリアルを出すか決めるため）
+let resolveAuthReady;
+const authReady=new Promise(r=>{ resolveAuthReady=r; setTimeout(r,4000); });
 
 async function syncFromFirestore(user){
   try{
@@ -655,10 +683,15 @@ async function syncFromFirestore(user){
       if(data.theme) localStorage.setItem('handit_theme', data.theme);
       if(data.title) localStorage.setItem('handit_title', data.title);
       Rewards.applyTheme();
+      // 利き手：アカウントにあればそれを使う。無ければこの端末の設定を上げる。
+      if(data.hand) Prefs.setHand(data.hand);
+      if(data.tutorialDone) Prefs.setTutorialDone(true);
+      if((!data.hand&&Prefs.getHand())||(!data.tutorialDone&&Prefs.tutorialDone())) syncPrefs();
     } else {
       await fsSetDoc(ref,{
         xp:parseInt(localStorage.getItem('handit_xp')||'0'),
         cleared:getClearedLevels(),
+        ...prefsPayload(),
         email:user.email,
         createdAt:fsServerTimestamp(),
         updatedAt:fsServerTimestamp()
@@ -739,6 +772,7 @@ document.getElementById('signup-submit').addEventListener('click', async ()=>{
     await fsSetDoc(fsDoc(db,'users',cred.user.uid),{
       xp:parseInt(localStorage.getItem('handit_xp')||'0'),
       cleared:getClearedLevels(),
+      ...prefsPayload(),
       consent:{ dataCollection:true, consentedAt:fsServerTimestamp() },
       email,
       createdAt:fsServerTimestamp(),
@@ -885,6 +919,20 @@ function buildMe(){
     if(open) b.addEventListener('click',()=>{Rewards.setTheme(t.id);buildMe();syncRewards();});
     thw.appendChild(b);
   });
+
+  // 利き手
+  const curHand=Prefs.handOrDefault();
+  const hw=document.getElementById('me-hand');
+  hw.innerHTML='';
+  Prefs.HANDS.forEach(h=>{
+    const b=document.createElement('button');
+    b.className='me-card'+(h.id===curHand?' on':'');
+    b.innerHTML=`<div class="me-card-icon">${h.icon}</div>
+      <div class="me-card-name">${h.name}</div>
+      <div class="me-card-sub">${h.id===curHand?'使用中':'えらぶ'}</div>`;
+    b.addEventListener('click',()=>{chooseHand(h.id);buildMe();});
+    hw.appendChild(b);
+  });
 }
 
 // ヘッダーのメールアドレスの横に称号を出す
@@ -910,9 +958,37 @@ async function syncRewards(){
       cleared:getClearedLevels(),
       theme:Rewards.currentTheme().id,
       title:Rewards.currentTitle().id,
+      ...prefsPayload(),
       updatedAt:fsServerTimestamp()
     },{merge:true});
   }catch(e){ console.error('見た目の保存に失敗:',e); }
+}
+
+// 利き手とチュートリアル済みフラグ（未設定の項目は送らない）
+function prefsPayload(){
+  const p={};
+  const h=Prefs.getHand();
+  if(h) p.hand=h;
+  if(Prefs.tutorialDone()) p.tutorialDone=true;
+  return p;
+}
+
+// 利き手などをアカウントに残す。xp/cleared も一緒に送るのはルールの validUser を満たすため。
+async function syncPrefs(){
+  if(!currentUser||!db) return;
+  try{
+    await fsSetDoc(fsDoc(db,'users',currentUser.uid),{
+      xp:Rewards.getXP(),
+      cleared:getClearedLevels(),
+      ...prefsPayload(),
+      updatedAt:fsServerTimestamp()
+    },{merge:true});
+  }catch(e){ console.error('設定の保存に失敗:',e); }
+}
+
+function chooseHand(id){
+  Prefs.setHand(id);
+  syncPrefs();
 }
 
 // コンソールから確認するための窓口
@@ -955,7 +1031,7 @@ function buildDictGrid() {
     card.innerHTML=`
       <div class="dict-thumb">
         ${item.gif
-          ?`<img src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+          ?`<img class="ref-media" src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
           :`<div class="dict-thumb-ph"><span>🤟</span><span>準備中</span></div>`}
       </div>
       <div class="dict-card-body">
@@ -970,10 +1046,10 @@ function buildDictGrid() {
 function openDictModal(item) {
   document.getElementById('modal-word').textContent=item.word;
   document.getElementById('modal-cat').textContent=item.cat;
-  document.getElementById('modal-desc').textContent=item.desc||'説明準備中';
+  document.getElementById('modal-desc').textContent=Prefs.handText(item.desc)||'説明準備中';
   const wrap=document.getElementById('modal-video-wrap');
   wrap.innerHTML=item.gif
-    ?`<img src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+    ?`<img class="ref-media" src="${item.gif}" alt="${item.word}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
     :`<div class="dict-modal-ph"><span style="font-size:40px;">🤟</span><span>GIF準備中</span></div>`;
   document.getElementById('dict-modal').classList.remove('hidden');
 }
@@ -997,7 +1073,7 @@ async function init() {
     labels=recognizer.knownWords;    // 学習済み + スタジオで登録した単語
   } catch(e) {
     document.getElementById('loading-text').textContent='AIの読み込みに失敗しました。dataset/ を確認してください。';
-    console.error(e); return;
+    console.error(e); return false;
   }
   document.getElementById('loading-text').textContent='MediaPipeを初期化中...';
   handsDetector=new Hands({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/'+f});
@@ -1010,6 +1086,7 @@ async function init() {
   buildDictTabs();
   buildDictGrid();
   document.getElementById('loading').classList.add('hidden');
+  return true;
 }
 
 // ===== カメラ =====
@@ -1064,7 +1141,7 @@ function onHandResults(r) {
   if(currentFaceData)FACE_KEYS.forEach(k=>{const p=currentFaceData[k];if(!p)return;ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,4,0,Math.PI*2);ctx.fillStyle='#0071E3';ctx.fill();});
   frameBuffer.push(buildVec(currentHandsData,currentFaceData));
   if(frameBuffer.length>TARGET_FRAMES)frameBuffer.shift();
-  if(frameBuffer.length===TARGET_FRAMES&&!answered&&!recognizer.busy)runInfer();
+  if(frameBuffer.length===TARGET_FRAMES&&!answered&&!recognizer.busy&&!coachActive())runInfer();
 }
 
 // 特徴量の計算は js/features.js に移動
@@ -1093,6 +1170,7 @@ async function startLesson(level,ready){
   showView('view-lesson');
   await startCam();
   nextChallenge();
+  if(onLessonReady){ const f=onLessonReady; onLessonReady=null; f(); }
 }
 
 function nextChallenge(){
@@ -1124,7 +1202,7 @@ function nextChallenge(){
         const container=rv.parentElement;
         if(!container.querySelector('img.ref-gif')){
           const img=document.createElement('img');
-          img.className='ref-gif';
+          img.className='ref-gif ref-media';
           img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;position:absolute;top:0;left:0;';
           container.appendChild(img);
         }
@@ -1205,8 +1283,120 @@ document.getElementById('complete-back-btn').addEventListener('click',e=>{
   e.preventDefault();goBack();
 });
 
-init();
-initFirebase();
+// ===================================================
+// 初回チュートリアル（吹き出しで目線を誘導する）
+//   1. ようこそ ＋ 利き手を選ぶ
+//   2. 学習マップのカテゴリを押してもらう
+//   3. お手本 → 4. カメラ → 5. 判定バー の順に照らす
+// ===================================================
+let onLessonReady=null;
+const TUT_STEPS=5;
+const stepLabel=n=>`${n} / ${TUT_STEPS}`;
+
+function finishTutorial(){
+  coachEnd();
+  Prefs.setTutorialDone(true);
+  syncPrefs();
+}
+
+async function runTutorial(){
+  // 1. 利き手
+  let picked=Prefs.getHand();
+  const v=await coachCard({
+    step:stepLabel(1),
+    title:'HANDITへようこそ！👋',
+    body:`カメラで<b>日本手話</b>を練習できるアプリです。<br>はじめに、利き手を教えてください。
+      <div class="hand-pick">
+        ${Prefs.HANDS.map(h=>`<button class="hand-opt${picked===h.id?' on':''}" data-hand="${h.id}">
+          <span class="hand-opt-icon">${h.icon}</span>
+          <span class="hand-opt-name">${h.name}</span>
+          <span class="hand-opt-sub">${h.id==='left'?'お手本を反転して表示':'そのまま表示'}</span>
+        </button>`).join('')}
+      </div>
+      <div class="map-label-note" style="margin-top:10px;">あとから「じぶん」タブで変えられます</div>`,
+    buttons:[{label:'つぎへ',value:'next',primary:true}],
+    skip:true,
+    onRender(el){
+      const next=el.querySelector('[data-i="0"]');
+      next.disabled=!picked; next.style.opacity=picked?1:0.4;
+      el.querySelectorAll('.hand-opt').forEach(b=>b.addEventListener('click',()=>{
+        picked=b.dataset.hand;
+        el.querySelectorAll('.hand-opt').forEach(x=>x.classList.toggle('on',x===b));
+        next.disabled=false; next.style.opacity=1;
+      }));
+    },
+  });
+  if(v==='skip'){ if(picked) chooseHand(picked); finishTutorial(); return; }
+  chooseHand(picked);
+
+  // 2. カテゴリを押す
+  const node=document.querySelector('.map-node:not(.locked)');
+  if(!node){ coachEnd(); return; }   // AIが読めていない。済みにはせず次回また出す
+  const lessonReady=new Promise(r=>{ onLessonReady=r; });
+  const v2=await coachSpot({
+    step:stepLabel(2),
+    target:node,
+    title:'ここからレッスンを始めよう',
+    body:'カテゴリをタップすると、その中の手話を1つずつ練習できます。',
+    waitClick:true,
+    skip:true,
+  });
+  if(v2!=='click'){ onLessonReady=null; finishTutorial(); return; }
+  coachEnd();
+  await lessonReady;
+  await new Promise(r=>setTimeout(r,350));   // 画面の切り替えを待つ
+
+  const sp=camSlot==='sp';
+  const flipNote=Prefs.handOrDefault()==='left'?'<br>左ききに合わせて<b>左右反転</b>しています。':'';
+
+  // 3. お手本
+  const v3=await coachSpot({
+    step:stepLabel(3),
+    target:sp?'.media-tab-btn[data-tab="video"]':'#video-space-pc',
+    title:'お手本を見よう 🎬',
+    body:(sp?'「参考動画」タブでお手本の動きを見られます。':'ここにお手本が流れます。鏡のつもりでまねしてみよう。')+flipNote,
+    buttons:[{label:'つぎへ',value:'next',primary:true}],
+    skip:true,
+  });
+  if(v3==='skip'){ finishTutorial(); return; }
+
+  // 4. カメラ
+  const v4=await coachSpot({
+    step:stepLabel(4),
+    target:sp?'#tab-camera .camera-wrap':'.lesson-media .camera-wrap',
+    title:'カメラに手と顔を映そう 📷',
+    body:'明るい場所で、<b>顔と手の両方</b>が入るようにしよう。手に点が表示されたらOK。<br>映像は送信されず、ブラウザの中だけで処理されます。',
+    buttons:[{label:'つぎへ',value:'next',primary:true}],
+    skip:true,
+  });
+  if(v4==='skip'){ finishTutorial(); return; }
+
+  // 5. 判定
+  await coachSpot({
+    step:stepLabel(5),
+    target:'.ls-body-left',
+    title:'正しくできるとバーがたまる',
+    body:'AIがお題の手話だと判定すると、黄色いバーが伸びます。<b>満タンで正解！</b><br>さっそくやってみよう。',
+    buttons:[{label:'やってみる！',value:'next',primary:true}],
+  });
+  frameBuffer=[]; holdCount=0;
+  finishTutorial();
+}
+
+document.getElementById('me-retut').addEventListener('click',()=>{
+  document.querySelector('.page-tab[data-page="map"]').click();
+  window.scrollTo({top:0});
+  runTutorial();
+});
+
+async function main(){
+  initFirebase();
+  const ok=await init();
+  if(!ok) return;                  // AIが読めないときはチュートリアルも出さない
+  await authReady;                 // ログイン済みなら tutorialDone を先に取り込む
+  if(!Prefs.tutorialDone()) runTutorial();
+}
+main();
 </script>
 </body>
 </html>
