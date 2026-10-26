@@ -31,7 +31,9 @@ service cloud.firestore {
              && d.xp >= 0
              && d.xp < 10000000
              && d.cleared is list
-             && d.cleared.size() < 500;
+             && d.cleared.size() < 500
+             && (!('hand' in d) || d.hand in ['right', 'left'])
+             && (!('tutorialDone' in d) || d.tutorialDone is bool);
     }
 
     // ---- 管理者の名簿 ----

@@ -394,10 +394,10 @@ document.getElementById('stat-cleared').textContent =
   document.getElementById('stat-words').textContent = n || '—';
 })();
 
-// ---- 初回はチュートリアルへ ----
+// ---- 学習ページへ（初回チュートリアルは learn.html の中で吹き出しで出す） ----
 function goLearn(e) {
   e.preventDefault();
-  location.href = localStorage.getItem('handit_tutorial_done') ? 'learn.html' : 'tutorial.html';
+  location.href = 'learn.html';
 }
 document.getElementById('go-top').addEventListener('click', goLearn);
 document.getElementById('go-hero').addEventListener('click', goLearn);
