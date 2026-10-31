@@ -195,13 +195,15 @@ async function startCam() {
   mpCam = await openCamera(video, async v => {
     fc++;
     await hands.send({ image: v });
-    if (fc % 2 === 0) await faceMesh.send({ image: v });
+    if (fc % 2 === 0 && mpCam?.tracking) await faceMesh.send({ image: v });   // 顔は手が見えている間だけ
   });
   canvas.width = mpCam.width; canvas.height = mpCam.height;
+  mpCam.paused = true;   // スタート画面では検出しない（カメラはつけたまま）
 }
 
 // ===== 毎フレーム =====
 function onHands(r) {
+  mpCam?.handSeen(!!r.multiHandLandmarks?.length);   // 手が無い間は処理を減らす
   const canvas = $('canvas'), ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!running) return;
@@ -274,11 +276,13 @@ function startLesson() {
   setStatus('手をカメラに向けてください', '');
   show('s-lesson');
   running = true;
+  mpCam.paused = false;
 }
 
 function success() {
   if (!running) return;
   running = false;
+  mpCam.paused = true;
   show('s-done');
   confetti();
   let left = AUTO_BACK_SEC;
@@ -294,6 +298,7 @@ function success() {
 function goHome() {
   clearInterval(autoTimer);
   running = false;
+  mpCam.paused = true;
   show('s-start');
 }
 

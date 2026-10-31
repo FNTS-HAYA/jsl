@@ -64,7 +64,7 @@ async function startCam() {
   mpCam = await openCamera(video, async v => {
     fc++;
     await handsDetector.send({ image: v });
-    if (fc % 2 === 0) await faceMesh.send({ image: v });
+    if (fc % 2 === 0 && mpCam?.tracking) await faceMesh.send({ image: v });   // 顔は手が見えている間だけ
   });
   canvas.width = mpCam.width; canvas.height = mpCam.height;
 }
@@ -74,6 +74,7 @@ window.addEventListener('pagehide', () => { if (mpCam) mpCam.stop(); });
 
 // ===== 毎フレーム =====
 function onHandResults(results) {
+  mpCam?.handSeen(!!results.multiHandLandmarks?.length);   // 手が無い間は処理を減らす
   const canvas = document.getElementById('canvas-free');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');

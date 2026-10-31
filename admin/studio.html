@@ -507,7 +507,7 @@ async function startCam() {
   mpCam = await openCamera(video, async v => {
     fc++;
     await handsDetector.send({ image: v });
-    if (fc % 2 === 0) await faceMesh.send({ image: v });
+    if (fc % 2 === 0 && mpCam?.tracking) await faceMesh.send({ image: v });   // 顔は手が見えている間だけ
   });
   canvas.width = mpCam.width; canvas.height = mpCam.height;
 }
@@ -520,6 +520,7 @@ function onHands(r) {
   currentHands = {};
 
   const found = r.multiHandLandmarks && r.multiHandLandmarks.length;
+  mpCam?.handSeen(!!found);   // 手が無い間は処理を減らす
   if (found) {
     for (let i = 0; i < r.multiHandLandmarks.length; i++) {
       const lm = r.multiHandLandmarks[i], side = r.multiHandedness[i].label;
