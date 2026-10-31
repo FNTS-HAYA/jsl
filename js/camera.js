@@ -19,6 +19,8 @@
 //   ・実際に開いた値はコンソールに [camera] で出す。
 // ===================================================
 
+import { perfMark, perfCamera } from './perfhud.js';
+
 export const CAM_WIDTH  = 640;
 export const CAM_HEIGHT = 480;
 export const MAX_FPS    = 30;
@@ -61,7 +63,9 @@ export async function openCamera(video, onFrame) {
   await video.play().catch(() => {});
 
   const s = track.getSettings ? track.getSettings() : {};
-  console.info(`[camera] ${video.videoWidth}x${video.videoHeight} ${s.frameRate ? Math.round(s.frameRate) + 'fps' : ''} (${track.label || 'camera'})`);
+  const camText = `${video.videoWidth}x${video.videoHeight} ${s.frameRate ? Math.round(s.frameRate) + 'fps' : ''} (${track.label || 'camera'})`;
+  console.info('[camera] ' + camText);
+  perfCamera(camText);
 
   let stopped = false;
   let lastTime = -1;
@@ -85,6 +89,7 @@ export async function openCamera(video, onFrame) {
       lastTime = video.currentTime;
       lastRun = now;
       try { await onFrame(video); } catch (e) { console.error(e); }
+      perfMark('frame', performance.now() - now);
     }
     schedule();
   }
