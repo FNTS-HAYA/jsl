@@ -363,7 +363,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
@@ -371,6 +370,7 @@
 <script type="module">
 import { buildVec, pickFacePoints, resample, FACE_KEYS, FEATURE_DIM, TARGET_FRAMES } from '../js/features.js';
 import { Recognizer } from '../js/recognizer.js';
+import { openCamera } from '../js/camera.js';
 import HANDIT_WORDS from '../words.js';
 import { initCloud, cloudUser, cloudAdmin, cloudOnline, saveCatalog, uploadTake,
          setGitHubToken, hasGitHubToken, getGitHubRepo, triggerTraining, actionsUrl } from '../js/cloud.js';
@@ -503,17 +503,15 @@ async function initDetectors() {
 async function startCam() {
   const video  = document.getElementById('cam');
   const canvas = document.getElementById('overlay');
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-  video.srcObject = stream;
-  await new Promise(r => video.onloadedmetadata = r);
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
   let fc = 0;
-  mpCam = new Camera(video, {
-    onFrame: async () => { fc++; await handsDetector.send({ image: video }); if (fc % 2 === 0) await faceMesh.send({ image: video }); },
-    width: 640, height: 480
+  mpCam = await openCamera(video, async v => {
+    fc++;
+    await handsDetector.send({ image: v });
+    if (fc % 2 === 0) await faceMesh.send({ image: v });
   });
-  mpCam.start();
+  canvas.width = mpCam.width; canvas.height = mpCam.height;
 }
+window.addEventListener('pagehide', () => { if (mpCam) mpCam.stop(); });
 
 function onHands(r) {
   const canvas = document.getElementById('overlay');

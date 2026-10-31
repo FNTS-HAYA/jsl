@@ -34,6 +34,11 @@ export class Recognizer {
     // 2番目に似ている単語との差。これが小さいなら「どれにでも似ている」
     // ということなので、その一致は信用しない。
     this.protoMargin    = opts.protoMargin    ?? 0.04;
+    // 判定の間隔。これまではカメラの1フレームごと（毎秒30回近く）に
+    // 分類モデルとエンコーダの2つを回していて、CPUを使い切っていた。
+    // 手話の動きは0.1秒ごとに見れば十分なので、それより短い間隔の呼び出しは捨てる。
+    this.minIntervalMs  = opts.minIntervalMs  ?? 100;
+    this.lastRun        = 0;
 
     this.encoderVersion = null;   // エンコーダの版。合わないプロトタイプは使わない
     this.session    = null;   // 分類モデル
@@ -95,6 +100,9 @@ export class Recognizer {
 
   isKnown(word) { return this.knownWords.includes(word); }
 
+  // 次の classify をすぐ走らせる（レッスンの切り替え時など）
+  reset() { this.lastRun = 0; this.lastResult = null; }
+
   // ---- 埋め込み（プロトタイプ作成にも使う） ----
   async embed(frames) {
     if (!this.encoder) return null;
@@ -109,6 +117,9 @@ export class Recognizer {
   // 戻り値: { label, conf, source } / null
   async classify(frames) {
     if (this.busy) return null;
+    const now = performance.now();
+    if (now - this.lastRun < this.minIntervalMs) return null;
+    this.lastRun = now;
     this.busy = true;
     try {
       let best = null;

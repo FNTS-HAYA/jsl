@@ -9,8 +9,9 @@
 import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/features.js';
 import { Recognizer } from './js/recognizer.js';
 import { applyTheme } from './js/rewards.js';
+import { openCamera } from './js/camera.js';
 
-const HOLD_FRAMES   = 15;     // これだけ連続で確信できたら単語を確定
+const HOLD_FRAMES   = 6;      // これだけ連続で確信できたら単語を確定（判定は0.1秒ごと）
 const FREE_COOLDOWN = 2000;   // 同じ単語が連続で並ぶのを防ぐ
 
 let recognizer = null;
@@ -59,22 +60,17 @@ async function init() {
 async function startCam() {
   const video  = document.getElementById('video-free');
   const canvas = document.getElementById('canvas-free');
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-  video.srcObject = stream;
-  await new Promise(r => video.onloadedmetadata = r);
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-
   let fc = 0;
-  mpCam = new Camera(video, {
-    onFrame: async () => {
-      fc++;
-      await handsDetector.send({ image: video });
-      if (fc % 2 === 0) await faceMesh.send({ image: video });
-    },
-    width: 640, height: 480
+  mpCam = await openCamera(video, async v => {
+    fc++;
+    await handsDetector.send({ image: v });
+    if (fc % 2 === 0) await faceMesh.send({ image: v });
   });
-  mpCam.start();
+  canvas.width = mpCam.width; canvas.height = mpCam.height;
 }
+
+// ページを離れるときにカメラを確実に閉じる
+window.addEventListener('pagehide', () => { if (mpCam) mpCam.stop(); });
 
 // ===== 毎フレーム =====
 function onHandResults(results) {
