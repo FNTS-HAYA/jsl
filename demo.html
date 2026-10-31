@@ -103,7 +103,8 @@
   <div class="panes">
     <div class="pane">
       <div class="pane-label">① お手本を見る</div>
-      <div class="media"><img src="assets/konnichiwa.gif" alt="こんにちは のお手本"></div>
+      <!-- GIF(16MB)は再生だけでCPUを食うので、軽いmp4(約100KB)を使う -->
+      <div class="media"><video id="ref" src="assets/konnichiwa.mp4" autoplay loop muted playsinline style="transform:none"></video></div>
       <div class="desc">人差し指と中指をそろえて額に当て、前へ下ろします。<br>（左右どちらの手でもOK）</div>
     </div>
     <div class="pane">
@@ -134,25 +135,26 @@
 <canvas id="confetti"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
 
 <script type="module">
 import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES, FEATURE_DIM } from './js/features.js';
+import { openCamera } from './js/camera.js';
 
 // ===== 設定 =====
 const TARGET         = 'こんにちは';
 const CONF_THRESHOLD = 0.70;   // learn.html と同じ
-const HOLD_FRAMES    = 15;     // 連続でこの回数「こんにちは」と判定されたら成功
+const HOLD_FRAMES    = 6;      // 連続でこの回数「こんにちは」と判定されたら成功（約0.6秒）
+const INFER_MS       = 100;    // 判定の間隔。毎フレーム回すとCPUを使い切る
 const AUTO_BACK_SEC  = 20;     // 成功画面から自動でスタートに戻るまで
 
 const $ = id => document.getElementById(id);
 let session = null, labels = [];
 let hands, faceMesh, mpCam = null;
 let frameBuffer = [], holdCount = 0, faceData = null;
-let running = false, busy = false, autoTimer = null;
+let running = false, busy = false, autoTimer = null, lastInfer = 0;
 
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
@@ -189,20 +191,13 @@ async function init() {
 // カメラは最初に1回だけ起動して、つけっぱなしにする（体験者ごとに許可を聞かれないように）
 async function startCam() {
   const video = $('video'), canvas = $('canvas');
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
-  video.srcObject = stream;
-  await new Promise(r => (video.onloadedmetadata = r));
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
   let fc = 0;
-  mpCam = new Camera(video, {
-    onFrame: async () => {
-      fc++;
-      await hands.send({ image: video });
-      if (fc % 2 === 0) await faceMesh.send({ image: video });
-    },
-    width: 640, height: 480,
+  mpCam = await openCamera(video, async v => {
+    fc++;
+    await hands.send({ image: v });
+    if (fc % 2 === 0) await faceMesh.send({ image: v });
   });
-  await mpCam.start();
+  canvas.width = mpCam.width; canvas.height = mpCam.height;
 }
 
 // ===== 毎フレーム =====
@@ -231,12 +226,13 @@ function onHands(r) {
 
   frameBuffer.push(buildVec(handsData, faceData));
   if (frameBuffer.length > TARGET_FRAMES) frameBuffer.shift();
-  if (frameBuffer.length === TARGET_FRAMES && !busy) infer();
+  if (frameBuffer.length === TARGET_FRAMES && !busy && performance.now() - lastInfer >= INFER_MS) infer();
 }
 
 // ===== 判定 =====
 async function infer() {
   busy = true;
+  lastInfer = performance.now();
   try {
     const t = new ort.Tensor('float32', Float32Array.from(frameBuffer.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
     const out = await session.run({ input: t });
