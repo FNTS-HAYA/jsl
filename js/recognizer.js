@@ -15,6 +15,7 @@
 // ===================================================
 
 import { TARGET_FRAMES, FEATURE_DIM, mirrorSequence } from './features.js';
+import { perfMark } from './perfhud.js';
 import { fetchPrototypes, savePrototype, deletePrototype, cloudAdmin } from './cloud.js';
 
 const PROTO_KEY = 'handit_prototypes';
@@ -121,6 +122,7 @@ export class Recognizer {
     if (now - this.lastRun < this.minIntervalMs) return null;
     this.lastRun = now;
     this.busy = true;
+    const t0 = performance.now();
     try {
       let best = null;
 
@@ -180,6 +182,7 @@ export class Recognizer {
       return null;
     } finally {
       this.busy = false;
+      perfMark('infer', performance.now() - t0);
     }
   }
 

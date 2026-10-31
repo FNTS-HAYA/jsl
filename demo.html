@@ -142,6 +142,7 @@
 <script type="module">
 import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES, FEATURE_DIM } from './js/features.js';
 import { openCamera } from './js/camera.js';
+import { perfMark } from './js/perfhud.js';
 
 // ===== 設定 =====
 const TARGET         = 'こんにちは';
@@ -235,6 +236,7 @@ function onHands(r) {
 async function infer() {
   busy = true;
   lastInfer = performance.now();
+  const t0 = lastInfer;
   try {
     const t = new ort.Tensor('float32', Float32Array.from(frameBuffer.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
     const out = await session.run({ input: t });
@@ -255,6 +257,7 @@ async function infer() {
     console.error('推論エラー', e);
   } finally {
     busy = false;
+    perfMark('infer', performance.now() - t0);
   }
 }
 
