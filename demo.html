@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handit — 体験デモ</title>
+<style>
+  :root {
+    --yellow:#FFD60A; --yellow-d:#C8A800; --yellow-l:#FFFBDD;
+    --ink:#0F0F0F; --ink-2:#3C3C3C; --ink-3:#8A8A8A; --line:#E8E8E8;
+    --bg:#FAFAFA; --white:#fff; --green:#00C46A; --green-l:#E6FAF2; --red:#FF3B30;
+    --shadow-lg:0 8px 32px rgba(0,0,0,0.12);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; }
+  body {
+    font-family:-apple-system,'Helvetica Neue',Arial,'Noto Sans JP',sans-serif;
+    background:var(--bg); color:var(--ink); overflow:hidden;
+  }
+  .screen { position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; padding:3vh 4vw; }
+  .screen.active { display:flex; }
+
+  /* ---- スタート ---- */
+  #s-start { background:var(--yellow); text-align:center; gap:3vh; }
+  #s-start img { height:14vh; }
+  #s-start h1 { font-size:clamp(28px,5.5vw,72px); font-weight:800; letter-spacing:-0.02em; line-height:1.25; }
+  #s-start p { font-size:clamp(16px,2vw,26px); color:var(--ink-2); }
+  .btn {
+    border:none; border-radius:999px; font-family:inherit; font-weight:800; cursor:pointer;
+    font-size:clamp(20px,2.4vw,32px); padding:0.7em 2.2em; transition:transform .1s;
+  }
+  .btn:active { transform:scale(0.96); }
+  .btn-dark { background:var(--ink); color:var(--white); }
+  .btn-light { background:var(--white); color:var(--ink); border:2px solid var(--line); }
+  .btn:disabled { opacity:.45; cursor:wait; }
+  #load-msg { font-size:clamp(14px,1.5vw,20px); color:var(--ink-2); min-height:1.5em; }
+
+  /* ---- レッスン ---- */
+  #s-lesson { justify-content:flex-start; gap:2.5vh; }
+  .lesson-head { text-align:center; }
+  .lesson-head .sub { font-size:clamp(14px,1.6vw,22px); color:var(--ink-3); font-weight:700; }
+  .lesson-head .word { font-size:clamp(40px,6vw,88px); font-weight:800; letter-spacing:-0.02em; }
+  .panes { display:grid; grid-template-columns:1fr 1fr; gap:2.5vw; width:100%; max-width:1500px; flex:1; min-height:0; }
+  .pane { display:flex; flex-direction:column; gap:1.5vh; min-height:0; }
+  .pane-label { font-size:clamp(14px,1.5vw,20px); font-weight:800; color:var(--ink-2); }
+  .media {
+    position:relative; flex:1; min-height:0; border-radius:20px; overflow:hidden;
+    background:#111; box-shadow:var(--shadow-lg);
+  }
+  .media img, .media video { width:100%; height:100%; object-fit:cover; display:block; }
+  .media video, .media canvas { transform:scaleX(-1); }
+  .media canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .desc { font-size:clamp(15px,1.6vw,22px); color:var(--ink-2); line-height:1.5; }
+
+  .status {
+    position:absolute; left:16px; right:16px; bottom:16px;
+    background:rgba(255,255,255,0.94); border-radius:14px; padding:12px 16px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .status-row { display:flex; align-items:center; gap:10px; font-weight:800; font-size:clamp(15px,1.6vw,22px); }
+  .dot { width:14px; height:14px; border-radius:50%; background:var(--line); flex:none; }
+  .dot.on { background:var(--green); box-shadow:0 0 0 5px rgba(0,196,106,.2); }
+  .dot.near { background:var(--yellow); }
+  .hold { height:10px; background:var(--line); border-radius:99px; overflow:hidden; }
+  .hold > div { height:100%; width:0; background:var(--green); transition:width .1s; }
+
+  /* ---- 成功 ---- */
+  #s-done { background:var(--green); color:var(--white); text-align:center; gap:3vh; }
+  #s-done .big { font-size:clamp(80px,14vw,200px); line-height:1; }
+  #s-done h2 { font-size:clamp(36px,6vw,84px); font-weight:800; }
+  #s-done p { font-size:clamp(16px,2vw,26px); opacity:.95; line-height:1.6; }
+  #s-done .row { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; }
+  #s-done .btn-light { border:none; }
+  #s-done .btn-ghost { background:transparent; color:var(--white); border:2px solid rgba(255,255,255,.7); }
+  #auto-back { font-size:clamp(13px,1.3vw,18px); opacity:.8; }
+  .pop { animation:pop .5s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes pop { from { transform:scale(.3); opacity:0; } to { transform:scale(1); opacity:1; } }
+  #confetti { position:fixed; inset:0; pointer-events:none; }
+
+  @media (max-width:800px), (orientation:portrait) {
+    .panes { grid-template-columns:1fr; grid-template-rows:1fr 1.3fr; }
+    .desc { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- スタート -->
+<section class="screen active" id="s-start">
+  <img src="handit_logo.png" alt="Handit">
+  <h1>手話で<br>「こんにちは」を<br>やってみよう</h1>
+  <p>カメラがあなたの手の動きを見て、AIが判定します</p>
+  <button class="btn btn-dark" id="btn-start" disabled>じゅんび中…</button>
+  <div id="load-msg">AIを読み込んでいます</div>
+</section>
+
+<!-- レッスン -->
+<section class="screen" id="s-lesson">
+  <div class="lesson-head">
+    <div class="sub">この手話をやってみよう</div>
+    <div class="word">こんにちは</div>
+  </div>
+  <div class="panes">
+    <div class="pane">
+      <div class="pane-label">① お手本を見る</div>
+      <div class="media"><img src="assets/konnichiwa.gif" alt="こんにちは のお手本"></div>
+      <div class="desc">人差し指と中指をそろえて額に当て、前へ下ろします。<br>（左右どちらの手でもOK）</div>
+    </div>
+    <div class="pane">
+      <div class="pane-label">② まねしてみる</div>
+      <div class="media">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+        <div class="status">
+          <div class="status-row"><span class="dot" id="dot"></span><span id="status-text">手をカメラに向けてください</span></div>
+          <div class="hold"><div id="hold-fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 成功 -->
+<section class="screen" id="s-done">
+  <div class="big pop">🎉</div>
+  <h2>できた！</h2>
+  <p>これが手話の「こんにちは」です。<br>Handit なら、カメラだけで手話の練習ができます。</p>
+  <div class="row">
+    <button class="btn btn-light" id="btn-again">もう一回</button>
+    <button class="btn btn-ghost" id="btn-home">おわる</button>
+  </div>
+  <div id="auto-back"></div>
+</section>
+<canvas id="confetti"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
+
+<script type="module">
+import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES, FEATURE_DIM } from './js/features.js';
+
+// ===== 設定 =====
+const TARGET         = 'こんにちは';
+const CONF_THRESHOLD = 0.70;   // learn.html と同じ
+const HOLD_FRAMES    = 15;     // 連続でこの回数「こんにちは」と判定されたら成功
+const AUTO_BACK_SEC  = 20;     // 成功画面から自動でスタートに戻るまで
+
+const $ = id => document.getElementById(id);
+let session = null, labels = [];
+let hands, faceMesh, mpCam = null;
+let frameBuffer = [], holdCount = 0, faceData = null;
+let running = false, busy = false, autoTimer = null;
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+}
+
+// ===== 読み込み =====
+async function init() {
+  try {
+    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/';
+    session = await ort.InferenceSession.create('dataset/model_single.onnx');
+    labels = (await fetch('dataset/labels.json').then(r => r.json())).labels || [];
+    if (!labels.includes(TARGET)) throw new Error('モデルに「こんにちは」がありません');
+
+    $('load-msg').textContent = 'カメラを準備しています';
+    hands = new Hands({ locateFile: f => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/' + f });
+    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.65, minTrackingConfidence: 0.5 });
+    hands.onResults(onHands);
+    faceMesh = new FaceMesh({ locateFile: f => 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/' + f });
+    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    faceMesh.onResults(r => {
+      faceData = r.multiFaceLandmarks?.length ? pickFacePoints(r.multiFaceLandmarks[0]) : null;
+    });
+    await startCam();
+
+    $('btn-start').disabled = false;
+    $('btn-start').textContent = 'はじめる';
+    $('load-msg').textContent = '';
+  } catch (e) {
+    console.error(e);
+    $('load-msg').textContent = '読み込みに失敗しました：' + (e.message || e) + '（再読み込みしてください）';
+  }
+}
+
+// カメラは最初に1回だけ起動して、つけっぱなしにする（体験者ごとに許可を聞かれないように）
+async function startCam() {
+  const video = $('video'), canvas = $('canvas');
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+  video.srcObject = stream;
+  await new Promise(r => (video.onloadedmetadata = r));
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  let fc = 0;
+  mpCam = new Camera(video, {
+    onFrame: async () => {
+      fc++;
+      await hands.send({ image: video });
+      if (fc % 2 === 0) await faceMesh.send({ image: video });
+    },
+    width: 640, height: 480,
+  });
+  await mpCam.start();
+}
+
+// ===== 毎フレーム =====
+function onHands(r) {
+  const canvas = $('canvas'), ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!running) return;
+
+  const handsData = {};
+  if (!r.multiHandLandmarks?.length) {
+    frameBuffer = []; holdCount = 0;
+    setStatus('手をカメラに向けてください', '');
+    return;
+  }
+  for (let i = 0; i < r.multiHandLandmarks.length; i++) {
+    const lm = r.multiHandLandmarks[i], side = r.multiHandedness[i].label;
+    handsData[side] = lm;
+    drawConnectors(ctx, lm, HAND_CONNECTIONS, { color: 'rgba(255,255,255,0.5)', lineWidth: 3 });
+    drawLandmarks(ctx, lm, { color: side === 'Right' ? '#FFD60A' : '#CE82FF', lineWidth: 1, radius: 4 });
+  }
+  if (faceData) FACE_KEYS.forEach(k => {
+    const p = faceData[k]; if (!p) return;
+    ctx.beginPath(); ctx.arc(p.x * canvas.width, p.y * canvas.height, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#0071E3'; ctx.fill();
+  });
+
+  frameBuffer.push(buildVec(handsData, faceData));
+  if (frameBuffer.length > TARGET_FRAMES) frameBuffer.shift();
+  if (frameBuffer.length === TARGET_FRAMES && !busy) infer();
+}
+
+// ===== 判定 =====
+async function infer() {
+  busy = true;
+  try {
+    const t = new ort.Tensor('float32', Float32Array.from(frameBuffer.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
+    const out = await session.run({ input: t });
+    const probs = softmax(Array.from(out[session.outputNames[0]].data));
+    const conf = probs[labels.indexOf(TARGET)];
+    if (!running) return;
+
+    if (conf >= CONF_THRESHOLD) {
+      holdCount++;
+      setStatus(`いい感じ！そのまま… ${Math.round(conf * 100)}%`, 'on');
+      if (holdCount >= HOLD_FRAMES) success();
+    } else {
+      holdCount = Math.max(0, holdCount - 2);
+      setStatus(conf >= 0.35 ? `おしい！ ${Math.round(conf * 100)}%` : 'お手本をまねしてみよう', conf >= 0.35 ? 'near' : '');
+    }
+    $('hold-fill').style.width = Math.min(100, holdCount / HOLD_FRAMES * 100) + '%';
+  } catch (e) {
+    console.error('推論エラー', e);
+  } finally {
+    busy = false;
+  }
+}
+
+function setStatus(text, cls) {
+  $('status-text').textContent = text;
+  $('dot').className = 'dot' + (cls ? ' ' + cls : '');
+}
+
+function softmax(a) {
+  const m = Math.max(...a), e = a.map(v => Math.exp(v - m)), s = e.reduce((x, y) => x + y, 0) || 1;
+  return e.map(v => v / s);
+}
+
+// ===== 画面遷移 =====
+function startLesson() {
+  clearInterval(autoTimer);
+  frameBuffer = []; holdCount = 0;
+  $('hold-fill').style.width = '0%';
+  setStatus('手をカメラに向けてください', '');
+  show('s-lesson');
+  running = true;
+}
+
+function success() {
+  if (!running) return;
+  running = false;
+  show('s-done');
+  confetti();
+  let left = AUTO_BACK_SEC;
+  $('auto-back').textContent = `${left}秒後に最初の画面にもどります`;
+  clearInterval(autoTimer);
+  autoTimer = setInterval(() => {
+    left--;
+    $('auto-back').textContent = `${left}秒後に最初の画面にもどります`;
+    if (left <= 0) goHome();
+  }, 1000);
+}
+
+function goHome() {
+  clearInterval(autoTimer);
+  running = false;
+  show('s-start');
+}
+
+$('btn-start').onclick = startLesson;
+$('btn-again').onclick = startLesson;
+$('btn-home').onclick  = goHome;
+
+// 説明員用ショートカット（体験者には見えない）
+//   S … 強制的に成功画面へ（判定がうまくいかないときの保険）
+//   Esc … 最初の画面へ
+document.addEventListener('keydown', e => {
+  if (e.key === 's' || e.key === 'S') { if (running) success(); }
+  if (e.key === 'Escape') goHome();
+});
+
+// ===== 紙吹雪 =====
+function confetti() {
+  const c = $('confetti'), ctx = c.getContext('2d');
+  c.width = innerWidth; c.height = innerHeight;
+  const colors = ['#FFD60A', '#FFFFFF', '#CE82FF', '#0071E3', '#FF9F0A'];
+  const ps = Array.from({ length: 160 }, () => ({
+    x: Math.random() * c.width, y: -20 - Math.random() * c.height * 0.5,
+    vx: (Math.random() - 0.5) * 4, vy: 3 + Math.random() * 5,
+    r: 5 + Math.random() * 7, a: Math.random() * Math.PI, va: (Math.random() - 0.5) * 0.3,
+    col: colors[Math.floor(Math.random() * colors.length)],
+  }));
+  const t0 = performance.now();
+  (function frame(t) {
+    ctx.clearRect(0, 0, c.width, c.height);
+    for (const p of ps) {
+      p.x += p.vx; p.y += p.vy; p.a += p.va;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
+      ctx.fillStyle = p.col; ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2);
+      ctx.restore();
+    }
+    if (t - t0 < 3500) requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, c.width, c.height);
+  })(t0);
+}
+
+init();
+</script>
+</body>
+</html>
