@@ -23,10 +23,16 @@ export const CAM_WIDTH  = 640;
 export const CAM_HEIGHT = 480;
 export const MAX_FPS    = 30;
 
+// 手が映っていない間の処理回数（回/秒）。
+// MediaPipe は手が無くても毎回「手を探す」処理を全力で回すので、
+// 誰もいないのに GPU が回り続けていた（高性能PCほどファンが回る）。
+// 手が見つからない状態が IDLE_AFTER 回続いたらここまで落とし、見つかったら即30に戻す。
+export const IDLE_FPS   = 8;
+const IDLE_AFTER        = 15;     // 30fpsで約0.5秒
+
 // 前の処理からこれだけ空いていないフレームは捨てる。
-// 60fps（16.7ms間隔）なら1枚おき＝30回/秒になり、
-// 30fps（33ms間隔、多少ぶれる）なら全部処理される値にしてある。
-const MIN_GAP_MS = 25;
+// 30回/秒のとき 25ms：60fps（16.7ms間隔）なら1枚おき、30fps（33ms間隔、多少ぶれる）なら全部処理。
+const gapFor = fps => 1000 / fps - 8;
 
 // video: <video> 要素
 // onFrame: async (video) => {}  … 新しいフレームごとに呼ばれる（前の処理が終わるまで次は呼ばない）
@@ -60,6 +66,8 @@ export async function openCamera(video, onFrame) {
   let stopped = false;
   let lastTime = -1;
   let lastRun = 0;
+  let missCount = 0;
+  let gap = gapFor(MAX_FPS);
   const hasRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
 
   const schedule = () => {
@@ -70,9 +78,10 @@ export async function openCamera(video, onFrame) {
 
   async function tick() {
     if (stopped) return;
+    if (cam.paused) { schedule(); return; }
     const now = performance.now();
     // 同じフレームを2回処理しない ＆ 30回/秒を超えない（60fpsのカメラや144Hzのモニタでも）
-    if (video.currentTime !== lastTime && !video.paused && now - lastRun >= MIN_GAP_MS) {
+    if (video.currentTime !== lastTime && !video.paused && now - lastRun >= gap) {
       lastTime = video.currentTime;
       lastRun = now;
       try { await onFrame(video); } catch (e) { console.error(e); }
@@ -81,16 +90,27 @@ export async function openCamera(video, onFrame) {
   }
   schedule();
 
-  return {
+  const cam = {
     stream,
     width:  video.videoWidth,
     height: video.videoHeight,
+    // true の間は MediaPipe に何も渡さない（スタート画面など、判定しないとき用）
+    paused: false,
+    // 手が見えているか（直近 IDLE_AFTER 回の間に1回でも見えたか）。
+    // 顔の検出はこれが true のときだけ回せばよい（手が無いフレームは使わないので）。
+    get tracking() { return missCount < IDLE_AFTER; },
+    // 手の検出結果ごとに呼ぶ。見えなければ処理回数を落とす
+    handSeen(found) {
+      if (found) { missCount = 0; gap = gapFor(MAX_FPS); }
+      else if (++missCount >= IDLE_AFTER) gap = gapFor(IDLE_FPS);
+    },
     stop() {
       stopped = true;
       stream.getTracks().forEach(t => t.stop());
       if (video.srcObject === stream) video.srcObject = null;
     },
   };
+  return cam;
 }
 
 // カメラが ideal を無視して大きな解像度・高いfpsで開いたときに下げ直す
