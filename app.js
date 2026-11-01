@@ -11,14 +11,15 @@ import { Recognizer } from './js/recognizer.js';
 import { applyTheme } from './js/rewards.js';
 import { openCamera } from './js/camera.js';
 
-const HOLD_FRAMES   = 6;      // これだけ連続で確信できたら単語を確定（判定は0.1秒ごと）
+const HOLD_FRAMES   = 4;      // これだけ連続で確信できたら単語を確定（判定は0.1秒ごと）
+const MISS_TOLERANCE = 8;     // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
 const FREE_COOLDOWN = 2000;   // 同じ単語が連続で並ぶのを防ぐ
 
 let recognizer = null;
 let frameBuffer = [];
 let currentHands = {}, currentFace = null;
 let handsDetector = null, faceMesh = null, mpCam = null;
-let holdCount = 0, lastWord = null, lastTime = 0;
+let holdCount = 0, lastWord = null, lastTime = 0, missCount = 0;
 
 // ===== 初期化 =====
 async function init() {
@@ -82,9 +83,15 @@ function onHandResults(results) {
   currentHands = {};
 
   if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
-    frameBuffer = []; holdCount = 0;
+    // 一瞬見失っただけなら、手なし（収録時と同じゼロ）として記録を続ける
+    if (++missCount > MISS_TOLERANCE) { frameBuffer = []; holdCount = 0; return; }
+    if (frameBuffer.length) {
+      frameBuffer.push(buildVec({}, currentFace));
+      if (frameBuffer.length > TARGET_FRAMES) frameBuffer.shift();
+    }
     return;
   }
+  missCount = 0;
 
   for (let i = 0; i < results.multiHandLandmarks.length; i++) {
     const lm = results.multiHandLandmarks[i], side = results.multiHandedness[i].label;
