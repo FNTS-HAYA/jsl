@@ -41,7 +41,8 @@ a { color: inherit; }
   border-bottom: 1px solid var(--rule);
 }
 .bar-in { display: flex; align-items: center; gap: 24px; height: 60px; }
-.bar-logo { height: 22px; }
+.bar-logo { height: 32px; }
+@media (max-width: 560px) { .bar-logo { height: 26px; } }
 .logo-link { display: flex; align-items: center; }
 .bar-nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
 .bar-nav a {
@@ -193,7 +194,7 @@ a { color: inherit; }
 /* ===== フッタ ===== */
 footer { border-top: 1px solid var(--rule); padding: 40px 0 56px; }
 .foot-in { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-footer img { height: 18px; opacity: 0.32; }
+footer img { height: 26px; opacity: 0.5; }
 footer p { font-size: 13px; color: var(--ink-3); line-height: 1.8; }
 
 /* ===== 大きい画面（PC）だけ横幅を広げる ===== */
