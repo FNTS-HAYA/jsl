@@ -42,6 +42,8 @@ body {
   display: flex; align-items: center; justify-content: space-between;
 }
 .topbar-logo { height: 24px; }
+.logo-link { display: flex; align-items: center; cursor: pointer; }
+.logo-link:hover .topbar-logo { opacity: 0.7; }
 .topbar-link {
   font-size: 14px; font-weight: 600; color: var(--ink-3);
   text-decoration: none; padding: 6px 12px; border-radius: 8px;
