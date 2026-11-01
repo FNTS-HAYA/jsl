@@ -732,15 +732,16 @@ await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行�
 const LEVELS     = HANDIT_WORDS.groups;   // カテゴリごとのまとまり
 const DICTIONARY = HANDIT_WORDS.dictionary;
 
-const CONF_THRESHOLD = 0.70;
-const HOLD_FRAMES    = 6;    // 判定は0.1秒ごと（recognizer.js）なので約0.6秒キープで正解
+const CONF_THRESHOLD = 0.55;   // 0.70 は厳しすぎた
+const HOLD_FRAMES    = 3;    // 判定は0.1秒ごと（recognizer.js）。速い手話でも通るよう短く
+const MISS_TOLERANCE = 8;    // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
 
 let recognizer=null, labels=[], frameBuffer=[], currentHandsData={}, currentFaceData=null;
 let handsDetector=null, faceMesh=null, mpCam=null;
 const PHASE = { LEARN:'learn', REVIEW:'review' };
 let currentPhase=PHASE.LEARN, currentLevel=null;
 let learnQueue=[], reviewQueue=[], currentChallenge=null, currentIdx=0;
-let correctCount=0, answered=false, holdCount=0;
+let correctCount=0, answered=false, holdCount=0, missCount=0;
 // XP：学習で覚えた単語ごと＋テストの正解ごと（全問正解でボーナス）
 const XP_LEARN=5, XP_TEST=10, XP_PERFECT=20, TEST_SECONDS=15;
 let learnedCount=0, testTaken=false, testTimer=null, testDeadline=0;
@@ -1324,7 +1325,13 @@ function onHandResults(r) {
   const canvas=document.getElementById(cid);if(!canvas)return;
   const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
   currentHandsData={};
-  if(!r.multiHandLandmarks||!r.multiHandLandmarks.length){frameBuffer=[];holdCount=0;return;}
+  if(!r.multiHandLandmarks||!r.multiHandLandmarks.length){
+    // 一瞬見失っただけなら、手なし（収録時と同じゼロ）として記録を続ける
+    if(++missCount>MISS_TOLERANCE){frameBuffer=[];holdCount=0;return;}
+    if(frameBuffer.length){frameBuffer.push(buildVec({},currentFaceData));if(frameBuffer.length>TARGET_FRAMES)frameBuffer.shift();}
+    return;
+  }
+  missCount=0;
   for(let i=0;i<r.multiHandLandmarks.length;i++){
     const lm=r.multiHandLandmarks[i],side=r.multiHandedness[i].label;
     currentHandsData[side]=lm;
@@ -1355,7 +1362,7 @@ async function runInfer(){
     if(currentPhase===PHASE.LEARN) learnedCount++; else correctCount++;
     showFeedback(true);
   } }
-  else holdCount=0;
+  else holdCount=Math.max(0,holdCount-1);   // 1回外れただけでゼロに戻さない
 }
 
 // ===== レッスン =====

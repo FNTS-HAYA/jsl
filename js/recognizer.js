@@ -14,7 +14,16 @@
 // train.py を回すと 2) の単語が 1) に昇格する。
 // ===================================================
 
-import { TARGET_FRAMES, FEATURE_DIM, mirrorSequence } from './features.js';
+import { TARGET_FRAMES, FEATURE_DIM, mirrorSequence, resample } from './features.js';
+
+// 速さ違いの見方。判定のたびに順番に切り替える。
+//   1.0  … 直近64フレーム（約2.1秒）をそのまま。収録と同じ速さ
+//   0.7  … 直近45フレーム（約1.5秒）を64に引き伸ばす。速めの手話用
+//   0.5  … 直近32フレーム（約1.1秒）を64に引き伸ばす。かなり速い手話用
+// 速くやると手話が窓の一部にぎゅっと縮まり、学習時（2.2秒いっぱいに
+// 広がっている）と形が変わって認識されなかった。短い窓を引き伸ばして
+// 学習時の速さに戻してから判定する。1回の判定は1つの窓だけなので重さは変わらない。
+const WINDOW_SCALES = [1.0, 0.7, 0.5];
 import { perfMark } from './perfhud.js';
 import { fetchPrototypes, savePrototype, deletePrototype, cloudAdmin } from './cloud.js';
 
@@ -28,13 +37,16 @@ export class Recognizer {
     this.modelPath   = opts.modelPath   || base + 'dataset/model_single.onnx';
     this.labelsPath  = opts.labelsPath  || base + 'dataset/labels.json';
     this.encoderPath = opts.encoderPath || base + 'dataset/encoder.onnx';
-    this.confThreshold  = opts.confThreshold  ?? 0.70;
+    this.confThreshold  = opts.confThreshold  ?? 0.55;   // 0.70 は厳しすぎた
     // スタジオは新しい単語を組み込むので、常にエンコーダが要る
     this.needEncoder    = opts.needEncoder    ?? false;
-    this.protoThreshold = opts.protoThreshold ?? 0.82;
+    this.protoThreshold = opts.protoThreshold ?? 0.78;   // 0.82 → ゆるめ
     // 2番目に似ている単語との差。これが小さいなら「どれにでも似ている」
     // ということなので、その一致は信用しない。
-    this.protoMargin    = opts.protoMargin    ?? 0.04;
+    this.protoMargin    = opts.protoMargin    ?? 0.03;   // 0.04 → ゆるめ
+    // 速い手話用の窓を使うか（スタジオの確認などで切りたいとき false）
+    this.multiSpeed     = opts.multiSpeed     ?? true;
+    this.scaleIdx       = 0;
     // 判定の間隔。これまではカメラの1フレームごと（毎秒30回近く）に
     // 分類モデルとエンコーダの2つを回していて、CPUを使い切っていた。
     // 手話の動きは0.1秒ごとに見れば十分なので、それより短い間隔の呼び出しは捨てる。
@@ -126,6 +138,16 @@ export class Recognizer {
     try {
       let best = null;
 
+      // 速さ違いの窓を順番に試す
+      if (this.multiSpeed && frames.length >= TARGET_FRAMES) {
+        const scale = WINDOW_SCALES[this.scaleIdx];
+        this.scaleIdx = (this.scaleIdx + 1) % WINDOW_SCALES.length;
+        if (scale < 1) {
+          const n = Math.round(TARGET_FRAMES * scale);
+          frames = resample(frames.slice(-n), TARGET_FRAMES);
+        }
+      }
+
       if (this.session) {
         const t = new ort.Tensor('float32', Float32Array.from(frames.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
         const out = await this.session.run({ input: t });
@@ -163,8 +185,9 @@ export class Recognizer {
           this.lastProto = { top, runnerUp, margin, all: scores };  // 確認用
 
           if (top.sim >= this.protoThreshold && margin >= this.protoMargin) {
+            // しきい値ちょうどで confThreshold 付近、1.0 で 0.99 になるように
             const conf = Math.min(0.99,
-              (top.sim - this.protoThreshold) / (1 - this.protoThreshold) * 0.3 + 0.70);
+              (top.sim - this.protoThreshold) / (1 - this.protoThreshold) * 0.4 + 0.60);
             // モデルが構造上その単語を出力できないなら、プロトタイプを採る。
             // 上の2条件を通っているので「何にでも当たる一致」ではない。
             const modelCannotSay = !this.labels.includes(top.word);
