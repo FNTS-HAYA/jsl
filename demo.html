@@ -140,21 +140,24 @@
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
 
 <script type="module">
-import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES, FEATURE_DIM } from './js/features.js';
+import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES, FEATURE_DIM, resample } from './js/features.js';
 import { openCamera } from './js/camera.js';
 import { perfMark } from './js/perfhud.js';
 
 // ===== 設定 =====
 const TARGET         = 'こんにちは';
-const CONF_THRESHOLD = 0.70;   // learn.html と同じ
-const HOLD_FRAMES    = 6;      // 連続でこの回数「こんにちは」と判定されたら成功（約0.6秒）
+const CONF_THRESHOLD = 0.55;   // learn.html と同じ（0.70 は厳しすぎた）
+const HOLD_FRAMES    = 3;      // この回数「こんにちは」と判定されたら成功（約0.3秒）
+const MISS_TOLERANCE = 8;      // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
+// 速さ違いの窓（recognizer.js と同じ）。直近64/45/32フレームを64に引き伸ばして順番に判定
+const WINDOW_SCALES  = [1.0, 0.7, 0.5];
 const INFER_MS       = 100;    // 判定の間隔。毎フレーム回すとCPUを使い切る
 const AUTO_BACK_SEC  = 20;     // 成功画面から自動でスタートに戻るまで
 
 const $ = id => document.getElementById(id);
 let session = null, labels = [];
 let hands, faceMesh, mpCam = null;
-let frameBuffer = [], holdCount = 0, faceData = null;
+let frameBuffer = [], holdCount = 0, faceData = null, missCount = 0, scaleIdx = 0;
 let running = false, busy = false, autoTimer = null, lastInfer = 0;
 
 function show(id) {
@@ -211,10 +214,19 @@ function onHands(r) {
 
   const handsData = {};
   if (!r.multiHandLandmarks?.length) {
+    // 一瞬見失っただけなら、手なし（収録時と同じゼロ）として記録を続ける
+    if (++missCount <= MISS_TOLERANCE) {
+      if (frameBuffer.length) {
+        frameBuffer.push(buildVec({}, faceData));
+        if (frameBuffer.length > TARGET_FRAMES) frameBuffer.shift();
+      }
+      return;
+    }
     frameBuffer = []; holdCount = 0;
     setStatus('手をカメラに向けてください', '');
     return;
   }
+  missCount = 0;
   for (let i = 0; i < r.multiHandLandmarks.length; i++) {
     const lm = r.multiHandLandmarks[i], side = r.multiHandedness[i].label;
     handsData[side] = lm;
@@ -238,7 +250,12 @@ async function infer() {
   lastInfer = performance.now();
   const t0 = lastInfer;
   try {
-    const t = new ort.Tensor('float32', Float32Array.from(frameBuffer.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
+    const scale = WINDOW_SCALES[scaleIdx];
+    scaleIdx = (scaleIdx + 1) % WINDOW_SCALES.length;
+    const frames = scale < 1
+      ? resample(frameBuffer.slice(-Math.round(TARGET_FRAMES * scale)), TARGET_FRAMES)
+      : frameBuffer;
+    const t = new ort.Tensor('float32', Float32Array.from(frames.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
     const out = await session.run({ input: t });
     const probs = softmax(Array.from(out[session.outputNames[0]].data));
     const conf = probs[labels.indexOf(TARGET)];
@@ -249,7 +266,7 @@ async function infer() {
       setStatus(`いい感じ！そのまま… ${Math.round(conf * 100)}%`, 'on');
       if (holdCount >= HOLD_FRAMES) success();
     } else {
-      holdCount = Math.max(0, holdCount - 2);
+      holdCount = Math.max(0, holdCount - 1);   // 1回外れただけで大きく戻さない
       setStatus(conf >= 0.35 ? `おしい！ ${Math.round(conf * 100)}%` : 'お手本をまねしてみよう', conf >= 0.35 ? 'near' : '');
     }
     $('hold-fill').style.width = Math.min(100, holdCount / HOLD_FRAMES * 100) + '%';
