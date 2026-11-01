@@ -42,6 +42,7 @@ a { color: inherit; }
 }
 .bar-in { display: flex; align-items: center; gap: 24px; height: 60px; }
 .bar-logo { height: 22px; }
+.logo-link { display: flex; align-items: center; }
 .bar-nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
 .bar-nav a {
   font-size: 14px; font-weight: 700; color: var(--ink-2);
@@ -60,6 +61,7 @@ a { color: inherit; }
 @media (max-width: 860px) { .hero { padding: 48px 0 52px; } .hero-in { grid-template-columns: 1fr; gap: 36px; } }
 
 .hero h1 {
+  word-break: keep-all; overflow-wrap: anywhere; /* 「と、」だけが次の行に落ちないように */
   font-size: clamp(34px, 5.4vw, 60px);
   font-weight: 900; line-height: 1.22; letter-spacing: -0.02em;
 }
@@ -193,13 +195,22 @@ footer { border-top: 1px solid var(--rule); padding: 40px 0 56px; }
 .foot-in { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 footer img { height: 18px; opacity: 0.32; }
 footer p { font-size: 13px; color: var(--ink-3); line-height: 1.8; }
+
+/* ===== 大きい画面（PC）だけ横幅を広げる ===== */
+@media (min-width: 1200px) {
+  .wrap { max-width: 1280px; padding: 0 48px; }
+  .hero-in { grid-template-columns: 1fr 400px; gap: 80px; }
+  .demo { max-width: 400px; }
+  .hero h1 { font-size: 64px; }
+  .hero p { font-size: 18px; }
+}
 </style>
 </head>
 <body>
 
 <header class="bar">
   <div class="wrap bar-in">
-    <img src="handit_logo.png" alt="HANDIT!" class="bar-logo"/>
+    <a href="index.html" class="logo-link" aria-label="ホームへ"><img src="handit_logo.png" alt="HANDIT!" class="bar-logo"/></a>
     <nav class="bar-nav">
       <a href="dictionary.html">手話図鑑</a>
       <a href="free.html">自由手話モード</a>
@@ -212,7 +223,7 @@ footer p { font-size: 13px; color: var(--ink-3); line-height: 1.8; }
 <section class="hero">
   <div class="wrap hero-in">
     <div>
-      <h1>カメラの前で手を動かすと、<br><span class="mark">日本手話が練習できる。</span></h1>
+      <h1>カメラの前で<wbr>手を動かすと、<br><span class="mark">日本手話が<wbr>練習できる。</span></h1>
       <p>
         手の形と動きをAIがその場で読み取って、合っているかを返します。
         インストールも、特別な機材も要りません。ブラウザとカメラだけ。

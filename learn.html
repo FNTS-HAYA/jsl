@@ -397,6 +397,29 @@
       box-shadow: 0 3px 0 var(--yellow-d); margin-bottom: 10px;
     }
     .auth-submit:hover { opacity: 0.9; }
+    /* ===== PC向けの幅（スマホの見た目は変えない） ===== */
+    /* マップの背景グラデーションは画面いっぱいに敷く（カードの枠だけ光るのを防ぐ） */
+    #page-map { background: radial-gradient(circle at 12% 0%, rgba(255,214,10,0.10), transparent 40%); }
+    .map-wrap { background: none; }
+
+    @media (min-width: 1100px) {
+      .map-wrap  { max-width: 1240px; padding: 40px 40px 100px; }
+      #level-map { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+      .map-title    { font-size: 28px; }
+      .map-subtitle { font-size: 14px; }
+      .map-circle { width: 88px; height: 88px; font-size: 36px; }
+      .map-label  { padding: 18px 22px; min-height: 108px; }
+      .map-label-title { font-size: 18px; }
+      .map-label-words { font-size: 13px; }
+
+      .dict-wrap { max-width: 1240px; padding: 32px 40px 80px; }
+      .dict-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+
+      .me-wrap { max-width: 760px; }
+    }
+    @media (min-width: 1500px) {
+      .map-wrap, .dict-wrap { max-width: 1400px; }
+    }
   </style>
 </head>
 <body>
@@ -496,7 +519,7 @@
 </div>
 
 <nav class="topbar">
-  <img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/>
+  <a href="index.html" class="logo-link" aria-label="ホームへ"><img src="handit_logo.png" alt="HANDIT!" class="topbar-logo"/></a>
   <div class="topbar-right">
     <div class="auth-chip" id="auth-chip">
       <span class="auth-email" id="auth-email"></span>
