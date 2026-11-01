@@ -40,10 +40,10 @@ export class Recognizer {
     this.confThreshold  = opts.confThreshold  ?? 0.55;   // 0.70 は厳しすぎた
     // スタジオは新しい単語を組み込むので、常にエンコーダが要る
     this.needEncoder    = opts.needEncoder    ?? false;
-    this.protoThreshold = opts.protoThreshold ?? 0.78;   // 0.82 → ゆるめ
+    this.protoThreshold = opts.protoThreshold ?? 0.80;   // 0.82 → 少しゆるめ
     // 2番目に似ている単語との差。これが小さいなら「どれにでも似ている」
     // ということなので、その一致は信用しない。
-    this.protoMargin    = opts.protoMargin    ?? 0.03;   // 0.04 → ゆるめ
+    this.protoMargin    = opts.protoMargin    ?? 0.04;   // 似た単語と入れ替わらないよう、これは元のまま
     // 速い手話用の窓を使うか（スタジオの確認などで切りたいとき false）
     this.multiSpeed     = opts.multiSpeed     ?? true;
     this.scaleIdx       = 0;
