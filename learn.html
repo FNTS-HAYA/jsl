@@ -732,7 +732,8 @@ await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行�
 const LEVELS     = HANDIT_WORDS.groups;   // カテゴリごとのまとまり
 const DICTIONARY = HANDIT_WORDS.dictionary;
 
-const CONF_THRESHOLD = 0.55;   // 0.70 は厳しすぎた
+const CONF_THRESHOLD = 0.60;   // 0.70 は厳しすぎ、0.55 だと似た単語と入れ替わる
+const RECENT_N       = 3;      // 速さ違いの窓1周ぶん（recognizer.js の WINDOW_SCALES と同じ数）
 const HOLD_FRAMES    = 3;    // 判定は0.1秒ごと（recognizer.js）。速い手話でも通るよう短く
 const MISS_TOLERANCE = 8;    // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
 
@@ -741,7 +742,7 @@ let handsDetector=null, faceMesh=null, mpCam=null;
 const PHASE = { LEARN:'learn', REVIEW:'review' };
 let currentPhase=PHASE.LEARN, currentLevel=null;
 let learnQueue=[], reviewQueue=[], currentChallenge=null, currentIdx=0;
-let correctCount=0, answered=false, holdCount=0, missCount=0;
+let correctCount=0, answered=false, holdCount=0, missCount=0, recent=[];
 // XP：学習で覚えた単語ごと＋テストの正解ごと（全問正解でボーナス）
 const XP_LEARN=5, XP_TEST=10, XP_PERFECT=20, TEST_SECONDS=15;
 let learnedCount=0, testTaken=false, testTimer=null, testDeadline=0;
@@ -1309,7 +1310,7 @@ function stopCam() {
     if(v&&v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}
   });
   if(recognizer)recognizer.reset();
-  frameBuffer=[];holdCount=0;currentHandsData={};currentFaceData=null;
+  frameBuffer=[];holdCount=0;recent=[];currentHandsData={};currentFaceData=null;
 }
 
 // ===== MediaPipe =====
@@ -1327,7 +1328,7 @@ function onHandResults(r) {
   currentHandsData={};
   if(!r.multiHandLandmarks||!r.multiHandLandmarks.length){
     // 一瞬見失っただけなら、手なし（収録時と同じゼロ）として記録を続ける
-    if(++missCount>MISS_TOLERANCE){frameBuffer=[];holdCount=0;return;}
+    if(++missCount>MISS_TOLERANCE){frameBuffer=[];holdCount=0;recent=[];return;}
     if(frameBuffer.length){frameBuffer.push(buildVec({},currentFaceData));if(frameBuffer.length>TARGET_FRAMES)frameBuffer.shift();}
     return;
   }
@@ -1350,19 +1351,31 @@ function onHandResults(r) {
 async function runInfer(){
   const res = await recognizer.classify(frameBuffer);
   if(!res) return;
-  const {label,conf}=res;
   if(answered) return;   // 待っているあいだに時間切れになった
+
+  // 判定は3つの速さの窓を順番に回している（recognizer.js）。
+  // 窓ごとに答えが違うことがあり、1回ずつ見ると「こんにちは」「おはよう」が
+  // 0.1秒ごとに入れ替わって見えていた。直近1周（3回）をまとめて見る。
+  recent.push(res); if(recent.length>RECENT_N) recent.shift();
+  const shown = recent.reduce((a,b)=>b.conf>a.conf?b:a);
+  const {label,conf}=shown;
+  const hit = res.label===currentChallenge && res.conf>=CONF_THRESHOLD;
+  const anyHit = recent.some(r=>r.label===currentChallenge && r.conf>=CONF_THRESHOLD);
   const ok = label===currentChallenge && conf>=CONF_THRESHOLD;
+
   document.getElementById('lesson-dot').className='detect-dot'+(conf>=CONF_THRESHOLD?(ok?' active':' wrong'):'');
   document.getElementById('lesson-label').textContent=conf>=0.35?label:'手をカメラに向けてください';
   document.getElementById('lesson-conf').textContent=conf>=0.35?Math.round(conf*100)+'%':'';
-  document.getElementById('hold-fill').style.width=(holdCount/HOLD_FRAMES*100)+'%';
-  if(ok){ holdCount++; if(holdCount>=HOLD_FRAMES){
+
+  // 当たった回だけ進める。1周まるごと外れたときだけ1つ戻す
+  if(hit) holdCount++;
+  else if(!anyHit) holdCount=Math.max(0,holdCount-1);
+  document.getElementById('hold-fill').style.width=Math.min(100,holdCount/HOLD_FRAMES*100)+'%';
+  if(holdCount>=HOLD_FRAMES){
     answered=true;stopTestTimer();
     if(currentPhase===PHASE.LEARN) learnedCount++; else correctCount++;
     showFeedback(true);
-  } }
-  else holdCount=Math.max(0,holdCount-1);   // 1回外れただけでゼロに戻さない
+  }
 }
 
 // ===== レッスン =====
@@ -1389,7 +1402,7 @@ function nextChallenge(){
     if(currentPhase===PHASE.LEARN){ showTestOffer(); return; }
     else{endLesson();return;}
   }
-  currentChallenge=queue[currentIdx];answered=false;holdCount=0;frameBuffer=[];
+  currentChallenge=queue[currentIdx];answered=false;holdCount=0;frameBuffer=[];recent=[];
   document.getElementById('challenge-word').textContent=currentChallenge;
   document.getElementById('lesson-dot').className='detect-dot';
   document.getElementById('lesson-label').textContent='手をカメラに向けてください';
@@ -1519,7 +1532,7 @@ function goBack(){
 document.getElementById('back-lesson').addEventListener('click', goBack);
 document.getElementById('fb-btn').addEventListener('click',()=>{
   document.getElementById('feedback').className='feedback-overlay';
-  answered=false;holdCount=0;frameBuffer=[];nextChallenge();
+  answered=false;holdCount=0;frameBuffer=[];recent=[];nextChallenge();
 });
 document.getElementById('complete-back-btn').addEventListener('click',e=>{
   e.preventDefault();goBack();
@@ -1621,7 +1634,7 @@ async function runTutorial(){
     body:'AIがお題の手話だと判定すると、黄色いバーが伸びます。<b>満タンで正解！</b><br>さっそくやってみよう。',
     buttons:[{label:'やってみる！',value:'next',primary:true}],
   });
-  frameBuffer=[]; holdCount=0;
+  frameBuffer=[]; holdCount=0; recent=[];
   finishTutorial();
 }
 
