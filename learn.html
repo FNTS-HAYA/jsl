@@ -873,6 +873,13 @@ const MISS_TOLERANCE = 8;    // 速く動かすと手を一瞬見失う。約0.2
 // 「手が止まる」「手を下ろす」「当たり始めてから SETTLE_MAX_MS たつ」のどれかを待つ。
 const STILL_SPEED    = 0.2;   // 手首の速さ（画面幅/秒）がこれ未満なら止まったとみなす。ゆっくりの手話を途中で止まったと見ないよう低め
 const SETTLE_MAX_MS  = 900;   // 動き続けていても、これだけ当たり続けたら正解
+// 当たりとして数える条件。手話の最初の形（おはようのグーなど）だけで通らないように
+//   ・判定した区間の大半（MIN_COVERAGE）が実際のカメラ映像であること（前を「手なし」で埋めた部分が多いと不可）
+//   ・その区間で手首が MIN_EXTENT 以上の範囲を動いていること
+// 指文字のように止まったまま表す単語は、動きの条件だけ外す（STATIC_CATS）。
+const MIN_COVERAGE   = 0.75;
+const MIN_EXTENT     = 0.06;  // 画面の6%（止めているときのブレは1%ほど）
+const STATIC_CATS    = ['指文字'];
 
 let recognizer=null, labels=[], currentHandsData={}, currentFaceData=null;
 const frameBuffer=new FrameWindow();   // 時刻つきでためる（js/features.js）
@@ -1604,6 +1611,15 @@ function onHandResults(r) {
 // 特徴量の計算は js/features.js に移動
 
 // ===== 推論 =====
+// その判定が「手話をひととおりやった区間」から出たものか
+function fullSign(res){
+  if(!res.windowMs) return true;                         // 古い呼び方（配列）のとき
+  if(frameBuffer.coverage(res.windowMs)<MIN_COVERAGE) return false;
+  const cat=(HANDIT_WORDS.find(res.label)||{}).cat;
+  if(STATIC_CATS.includes(cat)) return true;
+  return frameBuffer.extent(res.windowMs)>=MIN_EXTENT;
+}
+
 async function runInfer(){
   const res = await recognizer.classify(frameBuffer);
   if(!res) return;
@@ -1615,7 +1631,7 @@ async function runInfer(){
   recent.push(res); if(recent.length>RECENT_N) recent.shift();
   const shown = recent.reduce((a,b)=>b.conf>a.conf?b:a);
   const {label,conf}=shown;
-  const hit = res.label===currentChallenge && res.conf>=CONF_THRESHOLD;
+  const hit = res.label===currentChallenge && res.conf>=CONF_THRESHOLD && fullSign(res);
   const anyHit = recent.some(r=>r.label===currentChallenge && r.conf>=CONF_THRESHOLD);
   const ok = label===currentChallenge && conf>=CONF_THRESHOLD;
 

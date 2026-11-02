@@ -256,6 +256,29 @@ export class FrameWindow {
   // 判定を始めてよいか
   ready(minMs = MIN_SPAN_MS) { return this.frames.length >= 8 && this.span >= minMs; }
 
+  // 直近 ms ミリ秒のうち、実際にたまっている割合（0〜1）
+  coverage(ms) { return ms > 0 ? Math.min(1, this.span / ms) : 0; }
+
+  // 直近 ms ミリ秒で、手首がどれだけの範囲を動いたか（画面幅=1）。両手のうち大きい方。
+  // 動いた道のりではなく「動いた範囲の広さ」なので、手を止めているときの
+  // 細かいブレは積み重ならない。
+  extent(ms = RECORD_MS) {
+    const f = this.frames;
+    if (f.length < 2) return 0;
+    const from = f[f.length - 1].t - ms;
+    let best = 0;
+    for (const off of [SLICE.RIGHT[0], SLICE.LEFT[0]]) {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const { v, t } of f) {
+        if (t < from || (!v[off] && !v[off + 1])) continue;
+        x0 = Math.min(x0, v[off]); x1 = Math.max(x1, v[off]);
+        y0 = Math.min(y0, v[off + 1]); y1 = Math.max(y1, v[off + 1]);
+      }
+      if (x1 >= x0) best = Math.max(best, Math.hypot(x1 - x0, y1 - y0));
+    }
+    return best;
+  }
+
   // 直近 ms ミリ秒の手首の速さ（画面の幅=1 として 1秒あたり）。両手のうち速い方。
   // 手話が終わって手が止まったかを見るのに使う。手が写っていなければ 0。
   motion(ms = 250) {

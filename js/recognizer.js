@@ -149,13 +149,15 @@ export class Recognizer {
     const t0 = performance.now();
     try {
       let best = null;
+      let windowMs = null;   // FrameWindow のとき、どの長さで切り出したか
 
       // 速さ違いの窓を順番に試す
       if (frames instanceof FrameWindow) {
         // 時間で切り出す（スタジオの収録と同じ 2.2秒 → 64フレーム）
         const scale = this.multiSpeed ? WINDOW_SCALES[this.scaleIdx] : 1;
         if (this.multiSpeed) this.scaleIdx = (this.scaleIdx + 1) % WINDOW_SCALES.length;
-        frames = frames.window(RECORD_MS * scale);
+        windowMs = RECORD_MS * scale;
+        frames = frames.window(windowMs);
       } else if (this.multiSpeed && frames.length >= TARGET_FRAMES) {
         const scale = WINDOW_SCALES[this.scaleIdx];
         this.scaleIdx = (this.scaleIdx + 1) % WINDOW_SCALES.length;
@@ -215,6 +217,7 @@ export class Recognizer {
         }
       }
 
+      if (best) best.windowMs = windowMs;
       this.lastResult = best;
       return best;
     } catch (e) {

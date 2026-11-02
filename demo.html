@@ -152,6 +152,9 @@ const MISS_TOLERANCE = 8;      // 速く動かすと手を一瞬見失う。約0
 // 当たってもすぐ成功にせず、手が止まる・手を下ろす・SETTLE_MAX_MS たつ のどれかを待つ（learn.html と同じ）
 const STILL_SPEED    = 0.2;
 const SETTLE_MAX_MS  = 900;
+// 手話の最初の形だけで通らないように（learn.html と同じ）
+const MIN_COVERAGE   = 0.75;
+const MIN_EXTENT     = 0.06;
 let pendingSince = 0;
 // 速さ違いの窓（recognizer.js と同じ）。直近2.2/1.54/1.1秒を64フレームにそろえて順番に判定
 const WINDOW_SCALES  = [1.0, 0.7, 0.5];
@@ -257,14 +260,16 @@ async function infer() {
   try {
     const scale = WINDOW_SCALES[scaleIdx];
     scaleIdx = (scaleIdx + 1) % WINDOW_SCALES.length;
-    const frames = frameBuffer.window(RECORD_MS * scale);
+    const windowMs = RECORD_MS * scale;
+    const frames = frameBuffer.window(windowMs);
+    const fullSign = frameBuffer.coverage(windowMs) >= MIN_COVERAGE && frameBuffer.extent(windowMs) >= MIN_EXTENT;
     const t = new ort.Tensor('float32', Float32Array.from(frames.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
     const out = await session.run({ input: t });
     const probs = softmax(Array.from(out[session.outputNames[0]].data));
     const conf = probs[labels.indexOf(TARGET)];
     if (!running) return;
 
-    if (conf >= CONF_THRESHOLD) {
+    if (conf >= CONF_THRESHOLD && fullSign) {
       holdCount++;
       setStatus(`いい感じ！そのまま… ${Math.round(conf * 100)}%`, 'on');
     } else {
