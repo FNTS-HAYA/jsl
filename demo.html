@@ -149,6 +149,10 @@ const TARGET         = 'こんにちは';
 const CONF_THRESHOLD = 0.40;   // 体験用なので learn.html（0.60）よりかなり優しく
 const HOLD_FRAMES    = 2;      // この回数「こんにちは」と判定されたら成功
 const MISS_TOLERANCE = 8;      // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
+// 当たってもすぐ成功にせず、手が止まる・手を下ろす・SETTLE_MAX_MS たつ のどれかを待つ（learn.html と同じ）
+const STILL_SPEED    = 0.2;
+const SETTLE_MAX_MS  = 900;
+let pendingSince = 0;
 // 速さ違いの窓（recognizer.js と同じ）。直近2.2/1.54/1.1秒を64フレームにそろえて順番に判定
 const WINDOW_SCALES  = [1.0, 0.7, 0.5];
 const INFER_MS       = 100;    // 判定の間隔。毎フレーム回すとCPUを使い切る
@@ -222,6 +226,7 @@ function onHands(r) {
       if (frameBuffer.length) frameBuffer.push(buildVec({}, faceData));
       return;
     }
+    if (pendingSince) { success(); return; }   // 当たったあと手を下ろした
     frameBuffer.clear(); holdCount = 0;
     setStatus('手をカメラに向けてください', '');
     return;
@@ -262,12 +267,17 @@ async function infer() {
     if (conf >= CONF_THRESHOLD) {
       holdCount++;
       setStatus(`いい感じ！そのまま… ${Math.round(conf * 100)}%`, 'on');
-      if (holdCount >= HOLD_FRAMES) success();
     } else {
       // 体験用なので外れても減らさない（手が画面から消えたときだけリセット）
       setStatus(conf >= 0.20 ? `おしい！ ${Math.round(conf * 100)}%` : 'お手本をまねしてみよう', conf >= 0.20 ? 'near' : '');
     }
     $('hold-fill').style.width = Math.min(100, holdCount / HOLD_FRAMES * 100) + '%';
+    // 通ったら、手話が終わるのを待ってから成功にする
+    if (holdCount >= HOLD_FRAMES && !pendingSince) pendingSince = performance.now();
+    if (pendingSince) {
+      if (frameBuffer.motion() < STILL_SPEED || performance.now() - pendingSince >= SETTLE_MAX_MS) { success(); return; }
+      setStatus('いいね！最後までやってみよう', 'on');
+    }
   } catch (e) {
     console.error('推論エラー', e);
   } finally {
@@ -289,7 +299,7 @@ function softmax(a) {
 // ===== 画面遷移 =====
 function startLesson() {
   clearInterval(autoTimer);
-  frameBuffer.clear(); holdCount = 0;
+  frameBuffer.clear(); holdCount = 0; pendingSince = 0;
   $('hold-fill').style.width = '0%';
   setStatus('手をカメラに向けてください', '');
   show('s-lesson');
