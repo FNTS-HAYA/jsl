@@ -58,6 +58,12 @@
     }
     .page-tab:hover { color: var(--ink-2); background: rgba(0,0,0,0.03); }
     .page-tab.active { color: var(--ink); background: var(--white); box-shadow: 0 -2px 10px rgba(0,0,0,0.04); }
+    /* タブが4つになったので、スマホでは縦に積んで折り返しを防ぐ */
+    @media (max-width: 699px) {
+      .page-tabs { padding: 6px 6px 0; gap: 2px; }
+      .page-tab { padding: 8px 2px 9px; font-size: 12px; white-space: nowrap; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+      .page-tab .tab-ico { font-size: 18px; line-height: 1; }
+    }
 
     /* ===== マップ ===== */
     .map-wrap {
@@ -440,6 +446,87 @@
     @media (min-width: 1500px) {
       .map-wrap, .dict-wrap { max-width: 1400px; }
     }
+
+    /* ===== 連続日数 ===== */
+    .streak-chip {
+      align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;
+      background: var(--white); border: 1.5px solid var(--line); border-radius: 99px;
+      padding: 7px 14px; font-size: 13px; font-weight: 700; color: var(--ink-2);
+      margin: -16px 0 22px;
+    }
+    .streak-chip b { font-size: 16px; font-weight: 900; color: var(--ink); }
+    .streak-chip.hot { border-color: #FFB020; background: #FFF6E0; }
+    .streak-chip.risk { border-color: #FF8A3D; background: #FFF0E6; }
+    .me-streak { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.08); }
+    .me-streak-num { font-size: 26px; font-weight: 900; color: var(--ink); }
+    .me-streak-sub { font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+
+    /* ===== 小ネタ ===== */
+    .feedback-tip, .dict-modal-tip, .complete-tip {
+      font-size: 13px; line-height: 1.7; text-align: left;
+      border-radius: 14px; padding: 10px 14px; max-width: 400px; width: 100%;
+    }
+    .feedback-tip { background: rgba(255,255,255,0.55); color: var(--ink-2); }
+    .feedback-tip:empty, .dict-modal-tip:empty, .complete-tip:empty { display: none; }
+    .dict-modal-tip { background: var(--yellow-l); color: var(--ink-2); margin-bottom: 16px; }
+    .complete-tip { background: var(--white); border: 1.5px solid var(--line); color: var(--ink-2); }
+    .tip-label { display: block; font-size: 11px; font-weight: 800; color: var(--ink-3); margin-bottom: 2px; }
+
+    /* ===== 指文字 ===== */
+    .yubi-wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; }
+    .yubi-name {
+      background: var(--white); border: 1.5px solid var(--line); border-radius: var(--radius);
+      padding: 18px; box-shadow: var(--shadow); margin-bottom: 26px;
+    }
+    .yubi-name-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+    .yubi-name-sub { font-size: 12px; color: var(--ink-3); margin-bottom: 12px; }
+    .yubi-name-row { display: flex; gap: 8px; }
+    .yubi-name-row input {
+      flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 12px 14px;
+      border: 1.5px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink);
+    }
+    .yubi-btn {
+      border: none; border-radius: 12px; padding: 12px 18px; font: inherit; font-size: 15px; font-weight: 800;
+      background: var(--yellow); color: var(--ink); cursor: pointer; box-shadow: 0 3px 0 var(--yellow-d);
+    }
+    .yubi-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .yubi-letters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .yubi-letters:empty { display: none; }
+    .yubi-letter {
+      min-width: 52px; padding: 8px 10px; border-radius: 12px; border: 1.5px solid var(--line);
+      background: var(--bg); text-align: center;
+    }
+    .yubi-letter-char { font-size: 22px; font-weight: 900; color: var(--ink); line-height: 1.2; }
+    .yubi-letter-mark { font-size: 10px; font-weight: 700; color: var(--ink-3); }
+    .yubi-letter.notready { border-style: dashed; opacity: 0.6; }
+    .yubi-msg { font-size: 12px; color: var(--ink-3); margin-top: 10px; line-height: 1.6; }
+    .yubi-msg:empty { display: none; }
+    .yubi-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-3); margin: 0 0 14px; }
+    .yubi-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .yubi-dot { width: 10px; height: 10px; border-radius: 5px; background: var(--green); display: inline-block; }
+    .yubi-dot.off { background: var(--line); }
+    .yubi-row { display: grid; grid-template-columns: 64px repeat(5, 1fr); gap: 8px; margin-bottom: 8px; align-items: stretch; }
+    .yubi-row-name {
+      font-size: 12px; font-weight: 800; color: var(--ink-2); border: none; background: none;
+      border-radius: 10px; cursor: default; padding: 0; text-align: left; font-family: inherit;
+    }
+    .yubi-row-name.can { cursor: pointer; color: var(--ink); }
+    .yubi-row-name.can:hover { background: var(--yellow-l); }
+    .yubi-row-name small { display: block; font-size: 10px; font-weight: 700; color: var(--ink-3); }
+    .yubi-cell {
+      aspect-ratio: 1; border-radius: 14px; border: 1.5px solid var(--line); border-bottom-width: 4px;
+      background: var(--white); font: inherit; font-size: clamp(18px, 5vw, 26px); font-weight: 900; color: var(--ink);
+      cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center;
+    }
+    .yubi-cell:hover { border-color: var(--yellow-d); background: var(--yellow-l); }
+    .yubi-cell .yubi-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; }
+    .yubi-cell.empty { visibility: hidden; }
+    @media (min-width: 700px) {
+      .yubi-row { grid-template-columns: 72px repeat(5, minmax(0, 84px)); justify-content: start; }
+    }
+    .yubi-marks { margin-top: 26px; display: grid; gap: 8px; }
+    .yubi-mark-row { font-size: 13px; color: var(--ink-2); line-height: 1.6; }
+    .yubi-mark-row b { color: var(--ink); margin-right: 6px; }
   </style>
 </head>
 <body>
@@ -459,6 +546,7 @@
       <div class="dict-modal-word" id="modal-word">—</div>
       <div class="dict-modal-cat"  id="modal-cat">—</div>
       <div class="dict-modal-desc" id="modal-desc">—</div>
+      <div class="dict-modal-tip" id="modal-tip"></div>
       <button class="dict-modal-close" id="modal-close">閉じる</button>
     </div>
   </div>
@@ -552,9 +640,10 @@
 
 <!-- ページタブ -->
 <div class="page-tabs" id="page-tabs-bar">
-  <button class="page-tab active" data-page="map">📚 学習マップ</button>
-  <button class="page-tab"        data-page="dict">📖 手話図鑑</button>
-  <button class="page-tab"        data-page="me">🏅 じぶん</button>
+  <button class="page-tab active" data-page="map"><span class="tab-ico">📚</span> 学習マップ</button>
+  <button class="page-tab"        data-page="dict"><span class="tab-ico">📖</span> 手話図鑑</button>
+  <button class="page-tab"        data-page="yubi"><span class="tab-ico">🔤</span> 指文字</button>
+  <button class="page-tab"        data-page="me"><span class="tab-ico">🏅</span> じぶん</button>
 </div>
 
 <!-- ===== 学習マップ ===== -->
@@ -562,6 +651,7 @@
   <div class="map-wrap">
     <div class="map-title">📚 学習マップ</div>
     <div class="map-subtitle">好きなカテゴリから始められます</div>
+    <div class="streak-chip" id="streak-chip"></div>
     <button class="pick-entry" id="pick-open">
       <span class="pick-entry-icon">🎯</span>
       <span>
@@ -581,6 +671,35 @@
   </div>
 </div>
 
+<!-- ===== 指文字 ===== -->
+<div class="page-content" id="page-yubi">
+  <div class="yubi-wrap">
+    <div class="map-title">🔤 指文字</div>
+    <div class="map-subtitle" style="margin-bottom:20px;">ひらがな1文字ずつを手の形で表します。名前を伝えるときに使います</div>
+
+    <div class="yubi-name">
+      <div class="yubi-name-title">自分の名前を指文字でやってみよう</div>
+      <div class="yubi-name-sub">ひらがなかカタカナで入力してください</div>
+      <div class="yubi-name-row">
+        <label for="yubi-input" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">名前（ひらがな）</label>
+        <input id="yubi-input" type="text" placeholder="例：しゅう" autocomplete="off" maxlength="20"/>
+        <button class="yubi-btn" id="yubi-go" disabled>練習する</button>
+      </div>
+      <div class="yubi-letters" id="yubi-letters"></div>
+      <div class="yubi-msg" id="yubi-msg"></div>
+    </div>
+
+    <div class="yubi-legend">
+      <span><i class="yubi-dot"></i>AIが判定できる</span>
+      <span><i class="yubi-dot off"></i>AI準備中（お手本と説明だけ）</span>
+      <span>行の名前を押すと、その行をまとめて練習</span>
+    </div>
+    <div id="yubi-grid"></div>
+
+    <div class="yubi-marks" id="yubi-marks"></div>
+  </div>
+</div>
+
 <!-- ===== じぶん ===== -->
 <div class="page-content" id="page-me">
   <div class="me-wrap">
@@ -589,6 +708,10 @@
       <div class="me-xp" id="me-xp">0</div>
       <div class="me-next" id="me-next"></div>
       <div class="me-bar"><div class="me-bar-fill" id="me-bar"></div></div>
+      <div class="me-streak">
+        <div class="me-streak-num" id="me-streak-num">🔥 0日</div>
+        <div class="me-streak-sub" id="me-streak-sub"></div>
+      </div>
     </div>
 
     <div class="me-section">🏅 称号</div>
@@ -682,7 +805,12 @@
       <div class="complete-stat-num" id="c-xp">+0</div>
       <div class="complete-stat-label">XP獲得</div>
     </div>
+    <div class="complete-stat">
+      <div class="complete-stat-num" id="c-streak">🔥 0</div>
+      <div class="complete-stat-label" id="c-streak-label">日連続</div>
+    </div>
   </div>
+  <div class="complete-tip" id="complete-tip"></div>
   <a href="#" class="complete-home-btn" id="complete-back-btn">マップに戻る</a>
 </div>
 
@@ -702,6 +830,7 @@
 <div class="feedback-overlay" id="feedback">
   <div class="feedback-title" id="fb-title"></div>
   <div class="feedback-sub"   id="fb-sub"></div>
+  <div class="feedback-tip"   id="fb-tip"></div>
   <button class="feedback-btn" id="fb-btn">つぎへ</button>
 </div>
 
@@ -716,6 +845,9 @@ import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/feature
 import { Recognizer } from './js/recognizer.js';
 import * as Rewards from './js/rewards.js';
 import * as Prefs from './js/prefs.js';
+import * as Streak from './js/streak.js';
+import { tipFor, randomCultureTip } from './js/tips.js';
+import * as Yubi from './js/yubimoji.js';
 import { renderRef } from './js/media.js';
 import { openCamera } from './js/camera.js';
 
@@ -729,8 +861,9 @@ import { coachCard, coachSpot, coachEnd, coachActive } from './js/coach.js';
 Rewards.applyTheme();               // XP で選んだ配色を先に当てる
 Prefs.applyHand();                  // 左ききならお手本を反転
 await HANDIT_WORDS.load();          // Firestore の単語一覧を取りに行く
-const LEVELS     = HANDIT_WORDS.groups;   // カテゴリごとのまとまり
-const DICTIONARY = HANDIT_WORDS.dictionary;
+// 指文字は専用のタブで扱うので、学習マップと図鑑からは外す
+const LEVELS     = HANDIT_WORDS.groups.filter(g=>g.id!==Yubi.YUBI_CAT);   // カテゴリごとのまとまり
+const DICTIONARY = HANDIT_WORDS.dictionary.filter(d=>d.cat!==Yubi.YUBI_CAT);
 
 const CONF_THRESHOLD = 0.60;   // 0.70 は厳しすぎ、0.55 だと似た単語と入れ替わる
 const RECENT_N       = 3;      // 速さ違いの窓1周ぶん（recognizer.js の WINDOW_SCALES と同じ数）
@@ -800,6 +933,8 @@ async function onAuthChanged(user, wasInitialized){
     localStorage.setItem('handit_xp','0');
     localStorage.setItem('handit_cleared','[]');
     localStorage.setItem('handit_perfect','[]');
+    Streak.reset();
+    renderStreak();
     if(labels.length) buildLevelList();
   }
 }
@@ -820,6 +955,11 @@ async function syncFromFirestore(user){
       if(data.theme) localStorage.setItem('handit_theme', data.theme);
       if(data.title) localStorage.setItem('handit_title', data.title);
       Rewards.applyTheme();
+      // 連続日数：アカウントと端末の新しい方を使い、端末の方が新しければ上げる
+      const before=JSON.stringify(data.streak||null);
+      Streak.merge(data.streak);
+      if(JSON.stringify(Streak.getRaw())!==before && Streak.getRaw().last) syncPrefs();
+      renderStreak();
       // 利き手：アカウントにあればそれを使う。無ければこの端末の設定を上げる。
       if(data.hand) Prefs.setHand(data.hand);
       if(data.tutorialDone) Prefs.setTutorialDone(true);
@@ -829,6 +969,7 @@ async function syncFromFirestore(user){
         xp:parseInt(localStorage.getItem('handit_xp')||'0'),
         cleared:getClearedLevels(),
         ...prefsPayload(),
+        ...Streak.payload(),
         email:user.email,
         createdAt:fsServerTimestamp(),
         updatedAt:fsServerTimestamp()
@@ -910,6 +1051,7 @@ document.getElementById('signup-submit').addEventListener('click', async ()=>{
       xp:parseInt(localStorage.getItem('handit_xp')||'0'),
       cleared:getClearedLevels(),
       ...prefsPayload(),
+      ...Streak.payload(),
       consent:{ dataCollection:true, consentedAt:fsServerTimestamp() },
       email,
       createdAt:fsServerTimestamp(),
@@ -952,6 +1094,7 @@ document.querySelectorAll('.page-tab').forEach(btn => {
     btn.classList.add('active');
     document.getElementById('page-' + btn.dataset.page).classList.add('active');
     if (btn.dataset.page === 'me') buildMe();
+    if (btn.dataset.page === 'yubi') buildYubi();
   });
 });
 
@@ -1012,6 +1155,7 @@ function buildLevelList() {
 function buildMe(){
   const xp=Rewards.getXP();
   showTitleBadge();
+  renderStreak();
   document.getElementById('me-xp').textContent=xp.toLocaleString();
 
   // 次の解放まであとどれくらいか
@@ -1073,6 +1217,25 @@ function buildMe(){
   });
 }
 
+// ===== 連続日数の表示（学習マップのチップと、じぶんタブ） =====
+function renderStreak(){
+  const st=Streak.getStreak();
+  const chip=document.getElementById('streak-chip');
+  if(chip){
+    chip.className='streak-chip'+(st.doneToday&&st.count>=2?' hot':st.atRisk?' risk':'');
+    chip.innerHTML=
+      st.doneToday ? `🔥 <b>${st.count}</b>日連続！ 今日もできました`
+      : st.atRisk  ? `🔥 <b>${st.count}</b>日連続中。今日やると <b>${st.count+1}</b>日に！`
+      :              `🔥 今日1つ手話ができたら、連続記録スタート`;
+  }
+  const num=document.getElementById('me-streak-num');
+  const sub=document.getElementById('me-streak-sub');
+  if(num) num.textContent=`🔥 ${st.count}日`;
+  if(sub) sub.innerHTML=
+    (st.doneToday?'今日もできました':st.atRisk?'今日やると記録がのびます':'1つでも手話ができた日を数えます')
+    +`<br>最高記録 ${st.best}日`;
+}
+
 // ヘッダーのメールアドレスの横に称号を出す
 function showTitleBadge(){
   const el=document.getElementById('auth-email');
@@ -1097,6 +1260,7 @@ async function syncRewards(){
       theme:Rewards.currentTheme().id,
       title:Rewards.currentTitle().id,
       ...prefsPayload(),
+      ...Streak.payload(),
       updatedAt:fsServerTimestamp()
     },{merge:true});
   }catch(e){ console.error('見た目の保存に失敗:',e); }
@@ -1119,6 +1283,7 @@ async function syncPrefs(){
       xp:Rewards.getXP(),
       cleared:getClearedLevels(),
       ...prefsPayload(),
+      ...Streak.payload(),
       updatedAt:fsServerTimestamp()
     },{merge:true});
   }catch(e){ console.error('設定の保存に失敗:',e); }
@@ -1244,6 +1409,8 @@ function openDictModal(item) {
   document.getElementById('modal-word').textContent=item.word;
   document.getElementById('modal-cat').textContent=item.cat;
   document.getElementById('modal-desc').textContent=Prefs.handText(item.desc)||'説明準備中';
+  const tip=tipFor(item);
+  document.getElementById('modal-tip').innerHTML=tip?`<span class="tip-label">💡 豆知識</span>${tip}`:'';
   const wrap=document.getElementById('modal-video-wrap');
   renderRef(wrap, item, { placeholder:MODAL_PH, controls:true });
   document.getElementById('dict-modal').classList.remove('hidden');
@@ -1255,6 +1422,83 @@ document.getElementById('modal-close').addEventListener('click',()=>{
 });
 document.getElementById('dict-modal').addEventListener('click',function(e){
   if(e.target===this){this.classList.add('hidden');const v=document.querySelector('#modal-video-wrap video');if(v)v.pause();}
+});
+
+// ===== 指文字タブ =====
+// 指文字1文字のデータ。スタジオで収録した単語データがあれば、そちらを優先する
+function yubiData(kana){
+  const base=Yubi.yubiItem(kana);
+  const c=HANDIT_WORDS.find(kana);
+  return c?{...base,...c,desc:c.desc||base.desc}:base;
+}
+
+function buildYubi(){
+  const grid=document.getElementById('yubi-grid');
+  if(!grid) return;
+  grid.innerHTML='';
+  Yubi.ROWS.forEach(row=>{
+    const ready=row.kana.filter(k=>k&&labels.includes(k));
+    const r=document.createElement('div');
+    r.className='yubi-row';
+    const head=document.createElement('button');
+    head.className='yubi-row-name'+(ready.length?' can':'');
+    head.innerHTML=`${row.name}<small>${ready.length?`▶ ${ready.length}文字`:'準備中'}</small>`;
+    if(ready.length){
+      head.setAttribute('aria-label',`${row.name}を練習する`);
+      head.addEventListener('click',()=>startLesson(
+        { id:'yubi-'+row.name, title:'指文字 '+row.name, icon:'🔤', words:ready, custom:true }, ready));
+    } else head.disabled=true;
+    r.appendChild(head);
+    row.kana.forEach(k=>{
+      const c=document.createElement('button');
+      if(!k){ c.className='yubi-cell empty'; c.tabIndex=-1; c.setAttribute('aria-hidden','true'); r.appendChild(c); return; }
+      const ok=labels.includes(k);
+      c.className='yubi-cell';
+      c.innerHTML=`${k}<i class="yubi-dot${ok?'':' off'}"></i>`;
+      c.setAttribute('aria-label',`${k}（${ok?'AIが判定できる':'AI準備中'}）`);
+      c.addEventListener('click',()=>openDictModal(yubiData(k)));
+      r.appendChild(c);
+    });
+    grid.appendChild(r);
+  });
+
+  document.getElementById('yubi-marks').innerHTML=
+    `<div class="me-section" style="margin:0 0 4px;">濁音・半濁音・小さい字</div>`+
+    Object.values(Yubi.MARKS).map(m=>`<div class="yubi-mark-row"><b>${m.label}</b>${m.how}</div>`).join('');
+  updateYubiName();
+}
+
+function updateYubiName(){
+  const input=document.getElementById('yubi-input');
+  const go=document.getElementById('yubi-go');
+  const box=document.getElementById('yubi-letters');
+  const msg=document.getElementById('yubi-msg');
+  if(!input) return;
+  const { letters, skipped }=Yubi.spell(input.value);
+  box.innerHTML=letters.map(l=>{
+    const ok=labels.includes(l.kana);
+    const mark=l.mark?Yubi.MARKS[l.mark].label:'';
+    return `<div class="yubi-letter${ok?'':' notready'}"><div class="yubi-letter-char">${l.char}</div>`+
+      `<div class="yubi-letter-mark">${mark||(ok?'':'準備中')}</div></div>`;
+  }).join('');
+  const missing=[...new Set(letters.map(l=>l.kana).filter(k=>!labels.includes(k)))];
+  const notes=[];
+  if(skipped.length) notes.push(`「${[...new Set(skipped)].join('')}」は指文字にできないので飛ばします`);
+  if(missing.length) notes.push(`「${missing.join('・')}」はまだAIが判定できません。お手本は表の文字を押すと見られます`);
+  msg.textContent=notes.join('。');
+  go.disabled=!letters.length||missing.length>0;
+}
+
+document.getElementById('yubi-input').addEventListener('input',updateYubiName);
+document.getElementById('yubi-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.isComposing&&!document.getElementById('yubi-go').disabled) document.getElementById('yubi-go').click();
+});
+document.getElementById('yubi-go').addEventListener('click',()=>{
+  const { letters }=Yubi.spell(document.getElementById('yubi-input').value);
+  if(!letters.length||letters.some(l=>!labels.includes(l.kana))) return;
+  const words=letters.map(l=>l.kana);
+  const name=letters.map(l=>l.char).join('');
+  startLesson({ id:'yubi-name', title:name, icon:'🔤', words, custom:true, noTest:true, letters }, words);
 });
 
 // ===== 初期化 =====
@@ -1280,6 +1524,8 @@ async function init() {
   buildLevelList();
   buildDictTabs();
   buildDictGrid();
+  buildYubi();
+  renderStreak();
   document.getElementById('loading').classList.add('hidden');
   return true;
 }
@@ -1399,11 +1645,16 @@ async function startLesson(level,ready,opts={}){
 function nextChallenge(){
   const queue=currentPhase===PHASE.LEARN?learnQueue:reviewQueue;
   if(currentIdx>=queue.length){
-    if(currentPhase===PHASE.LEARN){ showTestOffer(); return; }
+    if(currentPhase===PHASE.LEARN){
+      if(currentLevel&&currentLevel.noTest){ answered=true; document.getElementById('feedback').className='feedback-overlay'; endLesson(); return; }
+      showTestOffer(); return;
+    }
     else{endLesson();return;}
   }
+  letterIdx=currentIdx;
   currentChallenge=queue[currentIdx];answered=false;holdCount=0;frameBuffer=[];recent=[];
-  document.getElementById('challenge-word').textContent=currentChallenge;
+  document.getElementById('challenge-word').textContent=challengeText();
+  setYubiHint();
   document.getElementById('lesson-dot').className='detect-dot';
   document.getElementById('lesson-label').textContent='手をカメラに向けてください';
   document.getElementById('lesson-conf').textContent='';
@@ -1423,12 +1674,33 @@ function nextChallenge(){
   if(currentPhase===PHASE.REVIEW) startTestTimer(); else stopTestTimer();
 }
 
+let letterIdx=0;
+// 指文字の名前練習では、濁点つきの字や小さい字をそのまま見せる
+// （AIが判定するのは清音の形だけなので、currentChallenge は清音のまま）
+function currentLetter(){
+  if(!currentLevel||!currentLevel.letters||currentPhase!==PHASE.LEARN) return null;
+  return currentLevel.letters[letterIdx]||null;
+}
+function challengeText(){
+  const l=currentLetter();
+  return l?l.char:currentChallenge;
+}
+function setYubiHint(){
+  const el=document.getElementById('ls-prompt-label');
+  if(!currentLevel||!currentLevel.letters){ return; }
+  const l=currentLetter();
+  el.textContent=l&&l.mark?`指文字：「${l.kana}」の形のまま、${Yubi.MARKS[l.mark].move}`:'指文字でやってみよう';
+}
+
 function showFeedback(correct){
   const fb=document.getElementById('feedback');
   fb.className='feedback-overlay show '+(correct?'correct':'wrong');
   const test=currentPhase===PHASE.REVIEW;
   document.getElementById('fb-title').textContent=correct?(test?`正解！ +${XP_TEST}XP 🎉`:'正解！ 🎉'):'時間切れ ⏰';
-  document.getElementById('fb-sub').textContent=correct?`「${currentChallenge}」できました！`:`「${currentChallenge}」はお手本を見てまた練習しよう`;
+  document.getElementById('fb-sub').textContent=correct?`「${challengeText()}」できました！`:`「${challengeText()}」はお手本を見てまた練習しよう`;
+  // 正解したら、その単語の由来や覚え方をひとこと
+  const tip=correct?tipFor(HANDIT_WORDS.find(currentChallenge)||currentChallenge):null;
+  document.getElementById('fb-tip').innerHTML=tip?`<span class="tip-label">💡 豆知識</span>${tip}`:'';
 }
 
 async function endLesson(){
@@ -1445,17 +1717,25 @@ async function endLesson(){
   const stored=parseInt(localStorage.getItem('handit_xp')||'0');
   const newXp=stored+xp;
   localStorage.setItem('handit_xp',newXp);
+  // 1つでも手話ができた日は、連続日数に数える
+  const didSign=learnedCount>0||correctCount>0;
+  const st=didSign?Streak.recordToday():null;
   if(currentUser&&db){
     try{
       await fsSetDoc(fsDoc(db,'users',currentUser.uid),{
         xp:newXp,
         cleared:getClearedLevels(),
         perfect:getPerfectLevels(),
+        ...Streak.payload(),
         updatedAt:fsServerTimestamp()
       },{merge:true});
     }catch(e){ console.error('Firestore保存エラー:',e); }
   }
-  buildMe();                     // 新しく解放されたものを反映
+  buildMe();                     // 新しく解放されたものを反映（連続日数もここで描き直す）
+  const cur=Streak.getStreak();
+  document.getElementById('c-streak').textContent=`🔥 ${cur.count}`;
+  document.getElementById('c-streak-label').textContent=st&&st.increased&&cur.count>=2?'日連続にのびた！':'日連続';
+  document.getElementById('complete-tip').innerHTML=`<span class="tip-label">🤟 手話のミニ知識</span>${randomCultureTip()}`;
   document.getElementById('c-correct').textContent=testTaken?`${correctCount}/${reviewQueue.length}`:'—';
   document.getElementById('c-xp').textContent='+'+xp;
   document.querySelector('#view-complete .complete-emoji').textContent=perfect?'🏆':'🎉';
@@ -1510,8 +1790,7 @@ document.getElementById('test-offer-skip').addEventListener('click',()=>{
 });
 
 function showView(id){
-  document.getElementById('page-map').classList.remove('active');
-  document.getElementById('page-dict').classList.remove('active');
+  document.querySelectorAll('.page-content').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-tabs-bar').style.display=id==='view-lesson'||id==='view-complete'?'none':'flex';
   ['view-lesson','view-complete'].forEach(v=>{
     const el=document.getElementById(v);if(el)el.classList.toggle('active',v===id);
@@ -1523,10 +1802,14 @@ function goBack(){
   document.getElementById('test-offer-modal').classList.add('hidden');
   document.getElementById('feedback').className='feedback-overlay';
   document.getElementById('page-tabs-bar').style.display='flex';
-  document.getElementById('page-map').classList.add('active');
+  // 開いていたタブに戻る（指文字から始めたら指文字へ）
+  const back=document.querySelector('.page-tab.active')?.dataset.page||'map';
+  document.getElementById('page-'+back).classList.add('active');
   document.getElementById('view-lesson').classList.remove('active');
   document.getElementById('view-complete').classList.remove('active');
   buildLevelList();
+  buildYubi();
+  renderStreak();
 }
 
 document.getElementById('back-lesson').addEventListener('click', goBack);
