@@ -869,6 +869,10 @@ const CONF_THRESHOLD = 0.60;   // 0.70 は厳しすぎ、0.55 だと似た単語
 const RECENT_N       = 3;      // 速さ違いの窓1周ぶん（recognizer.js の WINDOW_SCALES と同じ数）
 const HOLD_FRAMES    = 3;    // 判定は0.1秒ごと（recognizer.js）。速い手話でも通るよう短く
 const MISS_TOLERANCE = 8;    // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
+// 判定が通っても、すぐには正解にしない。手話の途中で当たってしまうため、
+// 「手が止まる」「手を下ろす」「当たり始めてから SETTLE_MAX_MS たつ」のどれかを待つ。
+const STILL_SPEED    = 0.2;   // 手首の速さ（画面幅/秒）がこれ未満なら止まったとみなす。ゆっくりの手話を途中で止まったと見ないよう低め
+const SETTLE_MAX_MS  = 900;   // 動き続けていても、これだけ当たり続けたら正解
 
 let recognizer=null, labels=[], currentHandsData={}, currentFaceData=null;
 const frameBuffer=new FrameWindow();   // 時刻つきでためる（js/features.js）
@@ -877,6 +881,7 @@ const PHASE = { LEARN:'learn', REVIEW:'review' };
 let currentPhase=PHASE.LEARN, currentLevel=null;
 let learnQueue=[], reviewQueue=[], currentChallenge=null, currentIdx=0;
 let correctCount=0, answered=false, holdCount=0, missCount=0, recent=[];
+let pendingSince=0;   // 判定が通って「手話の終わり」を待っている間の開始時刻
 // XP：学習で覚えた単語ごと＋テストの正解ごと（全問正解でボーナス）
 const XP_LEARN=5, XP_TEST=10, XP_PERFECT=20, TEST_SECONDS=15;
 let learnedCount=0, testTaken=false, testTimer=null, testDeadline=0;
@@ -1575,7 +1580,11 @@ function onHandResults(r) {
   currentHandsData={};
   if(!r.multiHandLandmarks||!r.multiHandLandmarks.length){
     // 一瞬見失っただけなら、手なし（収録時と同じゼロ）として記録を続ける
-    if(++missCount>MISS_TOLERANCE){frameBuffer.clear();holdCount=0;recent=[];return;}
+    if(++missCount>MISS_TOLERANCE){
+      // 当たっていて手を下ろした＝手話が終わった
+      if(pendingSince&&!answered){ succeed(); return; }
+      frameBuffer.clear();holdCount=0;recent=[];pendingSince=0;return;
+    }
     if(frameBuffer.length)frameBuffer.push(buildVec({},currentFaceData));
     return;
   }
@@ -1618,11 +1627,23 @@ async function runInfer(){
   if(hit) holdCount++;
   else if(!anyHit) holdCount=Math.max(0,holdCount-1);
   document.getElementById('hold-fill').style.width=Math.min(100,holdCount/HOLD_FRAMES*100)+'%';
-  if(holdCount>=HOLD_FRAMES){
-    answered=true;stopTestTimer();
-    if(currentPhase===PHASE.LEARN) learnedCount++; else correctCount++;
-    showFeedback(true);
+  // 一度通ったら正解は確定。ただし手話が終わるまで待ってから出す
+  const now=performance.now();
+  if(holdCount>=HOLD_FRAMES&&!pendingSince) pendingSince=now;
+  if(pendingSince){
+    const still=frameBuffer.motion()<STILL_SPEED;
+    if(still||now-pendingSince>=SETTLE_MAX_MS){ succeed(); return; }
+    document.getElementById('hold-fill').style.width='100%';
+    document.getElementById('lesson-label').textContent='いいね！最後までやってみよう';
   }
+}
+
+function succeed(){
+  if(answered) return;
+  answered=true;pendingSince=0;stopTestTimer();
+  document.getElementById('hold-fill').style.width='100%';
+  if(currentPhase===PHASE.LEARN) learnedCount++; else correctCount++;
+  showFeedback(true);
 }
 
 // ===== レッスン =====
@@ -1653,7 +1674,7 @@ function nextChallenge(){
     else{endLesson();return;}
   }
   letterIdx=currentIdx;
-  currentChallenge=queue[currentIdx];answered=false;holdCount=0;frameBuffer.clear();recent=[];
+  currentChallenge=queue[currentIdx];answered=false;holdCount=0;pendingSince=0;frameBuffer.clear();recent=[];
   document.getElementById('challenge-word').textContent=challengeText();
   setYubiHint();
   document.getElementById('lesson-dot').className='detect-dot';
@@ -1776,7 +1797,10 @@ function startTestTimer(){
     const left=Math.max(0,Math.ceil((testDeadline-Date.now())/1000));
     el.textContent=`⏱ のこり ${left}秒`;
     el.classList.toggle('hurry',left<=5);
-    if(left<=0&&!answered){ stopTestTimer(); answered=true; showFeedback(false); }
+    if(left<=0&&!answered){
+      if(pendingSince){ succeed(); return; }   // 当たっていて、終わりを待っていただけ
+      stopTestTimer(); answered=true; showFeedback(false);
+    }
   };
   tick(); testTimer=setInterval(tick,250);
 }
@@ -1816,7 +1840,7 @@ function goBack(){
 document.getElementById('back-lesson').addEventListener('click', goBack);
 document.getElementById('fb-btn').addEventListener('click',()=>{
   document.getElementById('feedback').className='feedback-overlay';
-  answered=false;holdCount=0;frameBuffer.clear();recent=[];nextChallenge();
+  answered=false;holdCount=0;pendingSince=0;frameBuffer.clear();recent=[];nextChallenge();
 });
 document.getElementById('complete-back-btn').addEventListener('click',e=>{
   e.preventDefault();goBack();

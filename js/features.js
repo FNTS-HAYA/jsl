@@ -256,6 +256,27 @@ export class FrameWindow {
   // 判定を始めてよいか
   ready(minMs = MIN_SPAN_MS) { return this.frames.length >= 8 && this.span >= minMs; }
 
+  // 直近 ms ミリ秒の手首の速さ（画面の幅=1 として 1秒あたり）。両手のうち速い方。
+  // 手話が終わって手が止まったかを見るのに使う。手が写っていなければ 0。
+  motion(ms = 250) {
+    const f = this.frames;
+    if (f.length < 2) return 0;
+    const last = f[f.length - 1];
+    let k = f.length - 2;
+    while (k > 0 && last.t - f[k].t < ms) k--;
+    const first = f[k], dt = (last.t - first.t) / 1000;
+    if (dt <= 0) return 0;
+    let best = 0;
+    for (const off of [SLICE.RIGHT[0], SLICE.LEFT[0]]) {
+      const a = first.v, b = last.v;
+      // その手が両方のフレームに写っているときだけ（0,0 は「手なし」）
+      if ((!a[off] && !a[off + 1]) || (!b[off] && !b[off + 1])) continue;
+      const d = Math.hypot(b[off] - a[off], b[off + 1] - a[off + 1]);
+      best = Math.max(best, d / dt);
+    }
+    return best;
+  }
+
   // 直近 durMs ミリ秒を n フレームに切り出す（時刻で線形補間）。
   // 足りない前の部分は「手なし」のフレームで埋める。
   window(durMs = RECORD_MS, n = TARGET_FRAMES) {
