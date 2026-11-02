@@ -208,3 +208,83 @@ export function resample(seq, n = TARGET_FRAMES) {
   }
   return out;
 }
+
+// ===================================================
+// 判定用のフレームのため方（時間で管理する）
+//
+// これまでは「直近64フレームがたまるまで判定しない」作りだった。
+// そのせいで、手を上げてすぐ手話をすると、64フレーム（約2秒、
+// 重いPCだと3〜4秒）たまる前に手話が終わってしまい、
+// 最初の1回がほぼ認識されなかった。単語が変わるたびに
+// ためた分を消すので、毎回の1回目が同じ目にあっていた。
+//
+// しかもスタジオは「2.2秒ぶんを64に縮める」収録なのに、判定側は
+// 「64フレーム」で切っていたので、カメラが遅いPCでは時間の長さがずれていた。
+//
+// ここでは各フレームに時刻を付けてため、
+//   ・2.2秒 / 1.54秒 / 1.1秒 の「時間」で切り出して64フレームにそろえる
+//     （スタジオの収録とまったく同じ切り方。fpsに左右されない）
+//   ・まだその長さぶんたまっていなければ、足りない前の部分を
+//     「手が写っていないフレーム」で埋める（収録で手を入れる前と同じ状態）
+// とすることで、手が写って約0.6秒後から判定を始められるようにした。
+// ===================================================
+
+export const RECORD_MS   = 2200;   // スタジオの1テイクの長さ（admin/studio.html と合わせる）
+export const MIN_SPAN_MS = 600;    // これだけたまったら判定を始める
+
+export class FrameWindow {
+  constructor(keepMs = RECORD_MS + 400) {
+    this.keepMs = keepMs;
+    this.frames = [];               // [{ v: 168次元, t: ms }]
+  }
+
+  push(vec, t = performance.now()) {
+    this.frames.push({ v: vec, t });
+    const from = t - this.keepMs;
+    let i = 0;
+    while (i < this.frames.length - 1 && this.frames[i].t < from) i++;
+    if (i) this.frames.splice(0, i);
+  }
+
+  clear() { this.frames = []; }
+  get length() { return this.frames.length; }
+  get span() {
+    const f = this.frames;
+    return f.length > 1 ? f[f.length - 1].t - f[0].t : 0;
+  }
+
+  // 判定を始めてよいか
+  ready(minMs = MIN_SPAN_MS) { return this.frames.length >= 8 && this.span >= minMs; }
+
+  // 直近 durMs ミリ秒を n フレームに切り出す（時刻で線形補間）。
+  // 足りない前の部分は「手なし」のフレームで埋める。
+  window(durMs = RECORD_MS, n = TARGET_FRAMES) {
+    const f = this.frames;
+    if (!f.length) return Array.from({ length: n }, () => new Array(FEATURE_DIM).fill(0));
+    const end = f[f.length - 1].t, start = end - durMs;
+    const pad = noHandFrame(f[0].v);
+    const out = [];
+    let j = 0;
+    for (let i = 0; i < n; i++) {
+      const t = n === 1 ? end : start + (durMs * i) / (n - 1);
+      if (t < f[0].t) { out.push(pad.slice()); continue; }
+      while (j < f.length - 2 && f[j + 1].t < t) j++;
+      const a = f[j], b = f[Math.min(j + 1, f.length - 1)];
+      const span = b.t - a.t;
+      const k = span > 0 ? Math.min(1, Math.max(0, (t - a.t) / span)) : 0;
+      const v = new Array(FEATURE_DIM);
+      for (let d = 0; d < FEATURE_DIM; d++) v[d] = a.v[d] * (1 - k) + b.v[d] * k;
+      out.push(v);
+    }
+    return out;
+  }
+}
+
+// 顔の位置はそのままで、手の部分だけ0にしたフレーム
+// （buildVec({}, face) と同じ形。手を入れる前の収録フレームに当たる）
+function noHandFrame(v) {
+  const out = v.slice();
+  out.fill(0, SLICE.RIGHT[0], SLICE.LEFT[1]);
+  out.fill(0, SLICE.RDIST[0], SLICE.LDIST[1]);
+  return out;
+}

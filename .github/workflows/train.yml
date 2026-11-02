@@ -1,7 +1,9 @@
 # ===================================================
 # HANDIT — 単語を追加したら自動で学習する
 #
-# スタジオの「AIに登録する」から repository_dispatch で呼ばれる。
+# スタジオで収録すると、最後の収録から1分後に repository_dispatch で呼ばれる。
+# ※ GitHub はこのフォルダ（.github/workflows/）にあるものしか動かさない。
+#   以前はリポジトリ直下に置いてあったため、一度も自動で動いていなかった。
 # 手動で回したいときは Actions タブの Run workflow から。
 #
 # 必要な Secrets（リポジトリの Settings → Secrets and variables → Actions）

@@ -368,14 +368,14 @@
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
 
 <script type="module">
-import { buildVec, pickFacePoints, resample, FACE_KEYS, FEATURE_DIM, TARGET_FRAMES } from '../js/features.js';
+import { buildVec, pickFacePoints, resample, FACE_KEYS, FEATURE_DIM, TARGET_FRAMES, RECORD_MS } from '../js/features.js';
 import { Recognizer } from '../js/recognizer.js';
 import { openCamera } from '../js/camera.js';
 import HANDIT_WORDS from '../words.js';
 import { initCloud, cloudUser, cloudAdmin, cloudOnline, saveCatalog, uploadTake,
          setGitHubToken, hasGitHubToken, getGitHubRepo, triggerTraining, actionsUrl } from '../js/cloud.js';
 
-const RECORD_MS  = 2200;   // 1テイクの長さ
+// 1テイクの長さ RECORD_MS は js/features.js にある（判定側の切り出しと必ずそろえるため）
 const MIN_TAKES  = 3;      // 即席登録に必要なテイク数
 const MIN_HAND_RATIO = 0.5;// 手が写っていないと失敗扱い
 
