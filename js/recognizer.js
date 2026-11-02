@@ -14,7 +14,7 @@
 // train.py を回すと 2) の単語が 1) に昇格する。
 // ===================================================
 
-import { TARGET_FRAMES, FEATURE_DIM, mirrorSequence, resample } from './features.js';
+import { TARGET_FRAMES, FEATURE_DIM, RECORD_MS, FrameWindow, mirrorSequence, resample } from './features.js';
 
 // 速さ違いの見方。判定のたびに順番に切り替える。
 //   1.0  … 直近64フレーム（約2.1秒）をそのまま。収録と同じ速さ
@@ -103,7 +103,19 @@ export class Recognizer {
     if (!this.session && !this.encoder) {
       throw new Error('モデルが1つも読み込めませんでした');
     }
+    await this.warmUp();
     return this;
+  }
+
+  // ONNX は最初の1回の実行だけ極端に遅い（WebAssemblyの準備が走る）。
+  // 読み込みのうちに空のデータで1回ずつ回しておき、
+  // ユーザーの最初の手話がその待ち時間に当たらないようにする。
+  async warmUp() {
+    const zeros = new ort.Tensor('float32', new Float32Array(TARGET_FRAMES * FEATURE_DIM), [1, TARGET_FRAMES, FEATURE_DIM]);
+    for (const s of [this.session, this.encoder]) {
+      if (!s) continue;
+      try { await s.run({ input: zeros }); } catch (e) { console.warn('ウォームアップに失敗', e); }
+    }
   }
 
   // 学習済み + 即席登録、両方あわせて認識できる単語
@@ -126,7 +138,7 @@ export class Recognizer {
   }
 
   // ---- 判定 ----
-  // frames: 64 x 168 の配列
+  // frames: FrameWindow（推奨。時間で切り出す）か、64 x 168 の配列
   // 戻り値: { label, conf, source } / null
   async classify(frames) {
     if (this.busy) return null;
@@ -139,7 +151,12 @@ export class Recognizer {
       let best = null;
 
       // 速さ違いの窓を順番に試す
-      if (this.multiSpeed && frames.length >= TARGET_FRAMES) {
+      if (frames instanceof FrameWindow) {
+        // 時間で切り出す（スタジオの収録と同じ 2.2秒 → 64フレーム）
+        const scale = this.multiSpeed ? WINDOW_SCALES[this.scaleIdx] : 1;
+        if (this.multiSpeed) this.scaleIdx = (this.scaleIdx + 1) % WINDOW_SCALES.length;
+        frames = frames.window(RECORD_MS * scale);
+      } else if (this.multiSpeed && frames.length >= TARGET_FRAMES) {
         const scale = WINDOW_SCALES[this.scaleIdx];
         this.scaleIdx = (this.scaleIdx + 1) % WINDOW_SCALES.length;
         if (scale < 1) {

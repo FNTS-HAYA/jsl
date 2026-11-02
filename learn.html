@@ -841,7 +841,7 @@
 
 <script type="module">
 import HANDIT_WORDS from './words.js';
-import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/features.js';
+import { buildVec, pickFacePoints, FACE_KEYS, FrameWindow } from './js/features.js';
 import { Recognizer } from './js/recognizer.js';
 import * as Rewards from './js/rewards.js';
 import * as Prefs from './js/prefs.js';
@@ -870,7 +870,8 @@ const RECENT_N       = 3;      // 速さ違いの窓1周ぶん（recognizer.js �
 const HOLD_FRAMES    = 3;    // 判定は0.1秒ごと（recognizer.js）。速い手話でも通るよう短く
 const MISS_TOLERANCE = 8;    // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
 
-let recognizer=null, labels=[], frameBuffer=[], currentHandsData={}, currentFaceData=null;
+let recognizer=null, labels=[], currentHandsData={}, currentFaceData=null;
+const frameBuffer=new FrameWindow();   // 時刻つきでためる（js/features.js）
 let handsDetector=null, faceMesh=null, mpCam=null;
 const PHASE = { LEARN:'learn', REVIEW:'review' };
 let currentPhase=PHASE.LEARN, currentLevel=null;
@@ -1556,7 +1557,7 @@ function stopCam() {
     if(v&&v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}
   });
   if(recognizer)recognizer.reset();
-  frameBuffer=[];holdCount=0;recent=[];currentHandsData={};currentFaceData=null;
+  frameBuffer.clear();holdCount=0;recent=[];currentHandsData={};currentFaceData=null;
 }
 
 // ===== MediaPipe =====
@@ -1574,8 +1575,8 @@ function onHandResults(r) {
   currentHandsData={};
   if(!r.multiHandLandmarks||!r.multiHandLandmarks.length){
     // 一瞬見失っただけなら、手なし（収録時と同じゼロ）として記録を続ける
-    if(++missCount>MISS_TOLERANCE){frameBuffer=[];holdCount=0;recent=[];return;}
-    if(frameBuffer.length){frameBuffer.push(buildVec({},currentFaceData));if(frameBuffer.length>TARGET_FRAMES)frameBuffer.shift();}
+    if(++missCount>MISS_TOLERANCE){frameBuffer.clear();holdCount=0;recent=[];return;}
+    if(frameBuffer.length)frameBuffer.push(buildVec({},currentFaceData));
     return;
   }
   missCount=0;
@@ -1587,8 +1588,8 @@ function onHandResults(r) {
   }
   if(currentFaceData)FACE_KEYS.forEach(k=>{const p=currentFaceData[k];if(!p)return;ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,4,0,Math.PI*2);ctx.fillStyle='#0071E3';ctx.fill();});
   frameBuffer.push(buildVec(currentHandsData,currentFaceData));
-  if(frameBuffer.length>TARGET_FRAMES)frameBuffer.shift();
-  if(frameBuffer.length===TARGET_FRAMES&&!answered&&!recognizer.busy&&!coachActive())runInfer();
+  // 手が写って約0.6秒後から判定する（64フレームたまるのを待たない）
+  if(frameBuffer.ready()&&!answered&&!recognizer.busy&&!coachActive())runInfer();
 }
 
 // 特徴量の計算は js/features.js に移動
@@ -1652,7 +1653,7 @@ function nextChallenge(){
     else{endLesson();return;}
   }
   letterIdx=currentIdx;
-  currentChallenge=queue[currentIdx];answered=false;holdCount=0;frameBuffer=[];recent=[];
+  currentChallenge=queue[currentIdx];answered=false;holdCount=0;frameBuffer.clear();recent=[];
   document.getElementById('challenge-word').textContent=challengeText();
   setYubiHint();
   document.getElementById('lesson-dot').className='detect-dot';
@@ -1815,7 +1816,7 @@ function goBack(){
 document.getElementById('back-lesson').addEventListener('click', goBack);
 document.getElementById('fb-btn').addEventListener('click',()=>{
   document.getElementById('feedback').className='feedback-overlay';
-  answered=false;holdCount=0;frameBuffer=[];recent=[];nextChallenge();
+  answered=false;holdCount=0;frameBuffer.clear();recent=[];nextChallenge();
 });
 document.getElementById('complete-back-btn').addEventListener('click',e=>{
   e.preventDefault();goBack();
@@ -1917,7 +1918,7 @@ async function runTutorial(){
     body:'AIがお題の手話だと判定すると、黄色いバーが伸びます。<b>満タンで正解！</b><br>さっそくやってみよう。',
     buttons:[{label:'やってみる！',value:'next',primary:true}],
   });
-  frameBuffer=[]; holdCount=0; recent=[];
+  frameBuffer.clear(); holdCount=0; recent=[];
   finishTutorial();
 }
 

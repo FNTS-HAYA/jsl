@@ -4,6 +4,11 @@ on:
   push:
     branches: [version-0.2]
   workflow_dispatch:
+  # 学習が終わったら、新しいモデルでサイトを作り直す。
+  # （学習ワークフローのコミットは GITHUB_TOKEN なので、上の push では動かない）
+  workflow_run:
+    workflows: ["手話モデルの学習"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -12,6 +17,8 @@ permissions:
 
 jobs:
   deploy:
+    # 学習から呼ばれたときは、学習が成功したときだけ
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -19,6 +26,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: version-0.2   # 学習のコミットを含む最新を使う
 
       - name: Generate firebase-config.js from secrets
         run: |

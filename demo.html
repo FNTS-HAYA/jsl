@@ -140,7 +140,7 @@
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
 
 <script type="module">
-import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES, FEATURE_DIM, resample } from './js/features.js';
+import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES, FEATURE_DIM, RECORD_MS, FrameWindow } from './js/features.js';
 import { openCamera } from './js/camera.js';
 import { perfMark } from './js/perfhud.js';
 
@@ -149,7 +149,7 @@ const TARGET         = 'こんにちは';
 const CONF_THRESHOLD = 0.40;   // 体験用なので learn.html（0.60）よりかなり優しく
 const HOLD_FRAMES    = 2;      // この回数「こんにちは」と判定されたら成功
 const MISS_TOLERANCE = 8;      // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
-// 速さ違いの窓（recognizer.js と同じ）。直近64/45/32フレームを64に引き伸ばして順番に判定
+// 速さ違いの窓（recognizer.js と同じ）。直近2.2/1.54/1.1秒を64フレームにそろえて順番に判定
 const WINDOW_SCALES  = [1.0, 0.7, 0.5];
 const INFER_MS       = 100;    // 判定の間隔。毎フレーム回すとCPUを使い切る
 const AUTO_BACK_SEC  = 20;     // 成功画面から自動でスタートに戻るまで
@@ -157,7 +157,8 @@ const AUTO_BACK_SEC  = 20;     // 成功画面から自動でスタートに戻�
 const $ = id => document.getElementById(id);
 let session = null, labels = [];
 let hands, faceMesh, mpCam = null;
-let frameBuffer = [], holdCount = 0, faceData = null, missCount = 0, scaleIdx = 0;
+const frameBuffer = new FrameWindow();   // 時刻つきでためる（js/features.js）
+let holdCount = 0, faceData = null, missCount = 0, scaleIdx = 0;
 let running = false, busy = false, autoTimer = null, lastInfer = 0;
 
 function show(id) {
@@ -171,6 +172,8 @@ async function init() {
     session = await ort.InferenceSession.create('dataset/model_single.onnx');
     labels = (await fetch('dataset/labels.json').then(r => r.json())).labels || [];
     if (!labels.includes(TARGET)) throw new Error('モデルに「こんにちは」がありません');
+    // 最初の1回の実行は遅いので、体験者が来る前に空で1回回しておく
+    try { await session.run({ input: new ort.Tensor('float32', new Float32Array(TARGET_FRAMES * FEATURE_DIM), [1, TARGET_FRAMES, FEATURE_DIM]) }); } catch {}
 
     $('load-msg').textContent = 'カメラを準備しています';
     hands = new Hands({ locateFile: f => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/' + f });
@@ -216,13 +219,10 @@ function onHands(r) {
   if (!r.multiHandLandmarks?.length) {
     // 一瞬見失っただけなら、手なし（収録時と同じゼロ）として記録を続ける
     if (++missCount <= MISS_TOLERANCE) {
-      if (frameBuffer.length) {
-        frameBuffer.push(buildVec({}, faceData));
-        if (frameBuffer.length > TARGET_FRAMES) frameBuffer.shift();
-      }
+      if (frameBuffer.length) frameBuffer.push(buildVec({}, faceData));
       return;
     }
-    frameBuffer = []; holdCount = 0;
+    frameBuffer.clear(); holdCount = 0;
     setStatus('手をカメラに向けてください', '');
     return;
   }
@@ -240,8 +240,8 @@ function onHands(r) {
   });
 
   frameBuffer.push(buildVec(handsData, faceData));
-  if (frameBuffer.length > TARGET_FRAMES) frameBuffer.shift();
-  if (frameBuffer.length === TARGET_FRAMES && !busy && performance.now() - lastInfer >= INFER_MS) infer();
+  // 手が写って約0.6秒後から判定する（64フレームたまるのを待たない）
+  if (frameBuffer.ready() && !busy && performance.now() - lastInfer >= INFER_MS) infer();
 }
 
 // ===== 判定 =====
@@ -252,9 +252,7 @@ async function infer() {
   try {
     const scale = WINDOW_SCALES[scaleIdx];
     scaleIdx = (scaleIdx + 1) % WINDOW_SCALES.length;
-    const frames = scale < 1
-      ? resample(frameBuffer.slice(-Math.round(TARGET_FRAMES * scale)), TARGET_FRAMES)
-      : frameBuffer;
+    const frames = frameBuffer.window(RECORD_MS * scale);
     const t = new ort.Tensor('float32', Float32Array.from(frames.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
     const out = await session.run({ input: t });
     const probs = softmax(Array.from(out[session.outputNames[0]].data));
@@ -291,7 +289,7 @@ function softmax(a) {
 // ===== 画面遷移 =====
 function startLesson() {
   clearInterval(autoTimer);
-  frameBuffer = []; holdCount = 0;
+  frameBuffer.clear(); holdCount = 0;
   $('hold-fill').style.width = '0%';
   setStatus('手をカメラに向けてください', '');
   show('s-lesson');
