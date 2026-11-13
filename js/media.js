@@ -22,6 +22,23 @@ export function refSrc(item, base = '') {
 }
 
 const isVideo = src => /\.(mp4|webm|mov)(\?|$)/i.test(src || '');
+const isGif   = src => /\.gif(\?|$)/i.test(src || '');
+
+// GIF は再生するだけでCPUをかなり使う（16MBのGIFでファンが回っていた）。
+// 同じ名前の .mp4 があればそちらを優先し、無ければGIFに戻す。
+//   例: assets/konnichiwa.gif → まず assets/konnichiwa.mp4 を試す
+// GIFから変換するには:
+//   ffmpeg -i in.gif -movflags +faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" out.mp4
+// 見つからなかったお手本のURLを覚えておき、同じタブの中では二度と取りに行かない
+// （お手本の無い単語ごとに 404 がコンソールに並ぶのを減らす）
+const MISS_KEY = 'handit_ref_missing';
+const missing = new Set((() => { try { return JSON.parse(sessionStorage.getItem(MISS_KEY) || '[]'); } catch { return []; } })());
+function markMissing(url) {
+  missing.add(url);
+  try { sessionStorage.setItem(MISS_KEY, JSON.stringify([...missing])); } catch {}
+}
+
+const mp4Of = src => src.replace(/\.gif(\?|$)/i, '.mp4$1');
 
 // container の中身をお手本に差し替える。
 // 見つからなければ placeholder を出す。
@@ -35,18 +52,49 @@ export function renderRef(container, item, opts = {}) {
   if (!src) { container.innerHTML = ph; return; }
 
   const alt = item.word || '';
+  const makeVideo = (vsrc, onFail) => {
+    if (missing.has(vsrc)) return null;
+    const v = document.createElement('video');
+    Object.assign(v, { src: vsrc, autoplay: true, loop: true, muted: true, playsInline: true, controls: !!opts.controls });
+    v.setAttribute('playsinline', '');
+    v.setAttribute('aria-label', alt);
+    v.className = 'ref-media ref-fill';
+    v.addEventListener('error', () => { markMissing(vsrc); onFail(); }, { once: true });
+    return v;
+  };
+  const makeImg = (isrc) => {
+    if (missing.has(isrc)) return null;
+    const img = document.createElement('img');
+    img.src = isrc; img.alt = alt; img.loading = opts.lazy ? 'lazy' : 'eager';
+    img.className = 'ref-media ref-fill';
+    img.addEventListener('error', () => { markMissing(isrc); container.innerHTML = ph; }, { once: true });
+    return img;
+  };
+
   let el;
   if (isVideo(src)) {
-    el = document.createElement('video');
-    Object.assign(el, { src, autoplay: true, loop: true, muted: true, playsInline: true, controls: !!opts.controls });
-    el.setAttribute('playsinline', '');
+    // mp4 が無ければ、同じ名前の GIF を試す（Firestore に古いパスが残っていても動くように）
+    const fallback = () => {
+      const gif = src.replace(/\.(mp4|webm|mov)(\?|$)/i, '.gif$2');
+      const img = gif !== src ? makeImg(gif) : null;
+      if (img) { container.innerHTML = ''; container.appendChild(img); }
+      else container.innerHTML = ph;
+    };
+    el = makeVideo(src, fallback);
+    if (!el) { fallback(); return; }
+  } else if (isGif(src)) {
+    const fallback = () => {
+      const img = makeImg(src);
+      if (img) { container.innerHTML = ''; container.appendChild(img); }
+      else container.innerHTML = ph;
+    };
+    el = makeVideo(mp4Of(src), fallback);
+    if (!el) { fallback(); return; }
   } else {
-    el = document.createElement('img');
-    el.src = src; el.alt = alt; el.loading = opts.lazy ? 'lazy' : 'eager';
+    el = makeImg(src);
   }
-  el.className = 'ref-media ref-fill';
-  el.addEventListener('error', () => { container.innerHTML = ph; }, { once: true });
 
+  if (!el) { container.innerHTML = ph; return; }
   container.innerHTML = '';
   container.appendChild(el);
 }

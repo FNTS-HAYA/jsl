@@ -17,7 +17,7 @@
 
 const WORDS = [
   { word: 'おはよう',     cat: 'あいさつ', gif: null,                    desc: '右手をグーにして額の横に当て、前方へ下げる。' },
-  { word: 'こんにちは',   cat: 'あいさつ', gif: 'assets/konnichiwa.gif', desc: '人差し指と中指を額に当て、前方へ下げる。' },
+  { word: 'こんにちは',   cat: 'あいさつ', gif: 'assets/konnichiwa.mp4', desc: '人差し指と中指を額に当て、前方へ下げる。' },
   { word: 'ありがとう',   cat: 'あいさつ', gif: null,                    desc: '右手を胸の前に出し、前方へ傾ける。' },
   { word: '好き',         cat: 'きもち',   gif: null,                    desc: '胸の前で右手をグーにして、ハートを作るように動かす。' },
   { word: '嫌い',         cat: 'きもち',   gif: null,                    desc: '手を払うように外側へ振る。' },

@@ -33,7 +33,11 @@ service cloud.firestore {
              && d.cleared is list
              && d.cleared.size() < 500
              && (!('hand' in d) || d.hand in ['right', 'left'])
-             && (!('tutorialDone' in d) || d.tutorialDone is bool);
+             && (!('tutorialDone' in d) || d.tutorialDone is bool)
+             && (!('streak' in d) || (d.streak is map
+                                      && d.streak.count is number && d.streak.count >= 0 && d.streak.count < 100000
+                                      && d.streak.best is number && d.streak.best >= 0 && d.streak.best < 100000
+                                      && d.streak.last is string && d.streak.last.size() == 10));
     }
 
     // ---- 管理者の名簿 ----
