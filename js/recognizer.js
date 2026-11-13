@@ -14,7 +14,18 @@
 // train.py を回すと 2) の単語が 1) に昇格する。
 // ===================================================
 
-import { TARGET_FRAMES, FEATURE_DIM, mirrorSequence } from './features.js';
+import { TARGET_FRAMES, FEATURE_DIM, RECORD_MS, NONE_LABEL, FrameWindow, mirrorSequence, resample } from './features.js';
+export { NONE_LABEL };
+
+// 速さ違いの見方。判定のたびに順番に切り替える。
+//   1.0  … 直近64フレーム（約2.1秒）をそのまま。収録と同じ速さ
+//   0.7  … 直近45フレーム（約1.5秒）を64に引き伸ばす。速めの手話用
+//   0.5  … 直近32フレーム（約1.1秒）を64に引き伸ばす。かなり速い手話用
+// 速くやると手話が窓の一部にぎゅっと縮まり、学習時（2.2秒いっぱいに
+// 広がっている）と形が変わって認識されなかった。短い窓を引き伸ばして
+// 学習時の速さに戻してから判定する。1回の判定は1つの窓だけなので重さは変わらない。
+const WINDOW_SCALES = [1.0, 0.7, 0.5];
+import { perfMark } from './perfhud.js';
 import { fetchPrototypes, savePrototype, deletePrototype, cloudAdmin } from './cloud.js';
 
 const PROTO_KEY = 'handit_prototypes';
@@ -27,13 +38,27 @@ export class Recognizer {
     this.modelPath   = opts.modelPath   || base + 'dataset/model_single.onnx';
     this.labelsPath  = opts.labelsPath  || base + 'dataset/labels.json';
     this.encoderPath = opts.encoderPath || base + 'dataset/encoder.onnx';
-    this.confThreshold  = opts.confThreshold  ?? 0.70;
+    this.confThreshold  = opts.confThreshold  ?? 0.55;   // 0.70 は厳しすぎた
     // スタジオは新しい単語を組み込むので、常にエンコーダが要る
     this.needEncoder    = opts.needEncoder    ?? false;
-    this.protoThreshold = opts.protoThreshold ?? 0.82;
+    this.protoThreshold = opts.protoThreshold ?? 0.80;   // 0.82 → 少しゆるめ
     // 2番目に似ている単語との差。これが小さいなら「どれにでも似ている」
     // ということなので、その一致は信用しない。
-    this.protoMargin    = opts.protoMargin    ?? 0.04;
+    this.protoMargin    = opts.protoMargin    ?? 0.04;   // 似た単語と入れ替わらないよう、これは元のまま
+    // 比べる相手（2番目の単語）がいないときは margin で確かめられないので、
+    // そのぶんしきい値を上げる。以前は margin=1 として素通りさせていた。
+    this.protoSoloThreshold = opts.protoSoloThreshold ?? 0.88;
+    // 分類モデルが「なし（手話じゃない）」と答えているのに、プロトタイプで
+    // 単語を出すときのしきい値。モデルが知らない単語でも、これくらい似ていれば採る。
+    this.protoOverNoneThreshold = opts.protoOverNoneThreshold ?? 0.88;
+    // 速い手話用の窓を使うか（スタジオの確認などで切りたいとき false）
+    this.multiSpeed     = opts.multiSpeed     ?? true;
+    this.scaleIdx       = 0;
+    // 判定の間隔。これまではカメラの1フレームごと（毎秒30回近く）に
+    // 分類モデルとエンコーダの2つを回していて、CPUを使い切っていた。
+    // 手話の動きは0.1秒ごとに見れば十分なので、それより短い間隔の呼び出しは捨てる。
+    this.minIntervalMs  = opts.minIntervalMs  ?? 100;
+    this.lastRun        = 0;
 
     this.encoderVersion = null;   // エンコーダの版。合わないプロトタイプは使わない
     this.session    = null;   // 分類モデル
@@ -85,15 +110,35 @@ export class Recognizer {
     if (!this.session && !this.encoder) {
       throw new Error('モデルが1つも読み込めませんでした');
     }
+    await this.warmUp();
     return this;
   }
 
-  // 学習済み + 即席登録、両方あわせて認識できる単語
-  get knownWords() {
-    return [...new Set([...this.labels, ...Object.keys(this.prototypes)])];
+  // ONNX は最初の1回の実行だけ極端に遅い（WebAssemblyの準備が走る）。
+  // 読み込みのうちに空のデータで1回ずつ回しておき、
+  // ユーザーの最初の手話がその待ち時間に当たらないようにする。
+  async warmUp() {
+    const zeros = new ort.Tensor('float32', new Float32Array(TARGET_FRAMES * FEATURE_DIM), [1, TARGET_FRAMES, FEATURE_DIM]);
+    for (const s of [this.session, this.encoder]) {
+      if (!s) continue;
+      try { await s.run({ input: zeros }); } catch (e) { console.warn('ウォームアップに失敗', e); }
+    }
   }
 
+  // 学習済み + 即席登録、両方あわせて認識できる単語
+  // （「なし」は単語ではないので含めない）
+  get knownWords() {
+    return [...new Set([...this.labels, ...Object.keys(this.prototypes)])]
+      .filter(w => w !== NONE_LABEL);
+  }
+
+  // モデルが「なし」を学習済みか
+  get hasNoneClass() { return this.labels.includes(NONE_LABEL); }
+
   isKnown(word) { return this.knownWords.includes(word); }
+
+  // 次の classify をすぐ走らせる（レッスンの切り替え時など）
+  reset() { this.lastRun = 0; this.lastResult = null; }
 
   // ---- 埋め込み（プロトタイプ作成にも使う） ----
   async embed(frames) {
@@ -105,13 +150,34 @@ export class Recognizer {
   }
 
   // ---- 判定 ----
-  // frames: 64 x 168 の配列
+  // frames: FrameWindow（推奨。時間で切り出す）か、64 x 168 の配列
   // 戻り値: { label, conf, source } / null
   async classify(frames) {
     if (this.busy) return null;
+    const now = performance.now();
+    if (now - this.lastRun < this.minIntervalMs) return null;
+    this.lastRun = now;
     this.busy = true;
+    const t0 = performance.now();
     try {
       let best = null;
+      let windowMs = null;   // FrameWindow のとき、どの長さで切り出したか
+
+      // 速さ違いの窓を順番に試す
+      if (frames instanceof FrameWindow) {
+        // 時間で切り出す（スタジオの収録と同じ 2.2秒 → 64フレーム）
+        const scale = this.multiSpeed ? WINDOW_SCALES[this.scaleIdx] : 1;
+        if (this.multiSpeed) this.scaleIdx = (this.scaleIdx + 1) % WINDOW_SCALES.length;
+        windowMs = RECORD_MS * scale;
+        frames = frames.window(windowMs);
+      } else if (this.multiSpeed && frames.length >= TARGET_FRAMES) {
+        const scale = WINDOW_SCALES[this.scaleIdx];
+        this.scaleIdx = (this.scaleIdx + 1) % WINDOW_SCALES.length;
+        if (scale < 1) {
+          const n = Math.round(TARGET_FRAMES * scale);
+          frames = resample(frames.slice(-n), TARGET_FRAMES);
+        }
+      }
 
       if (this.session) {
         const t = new ort.Tensor('float32', Float32Array.from(frames.flat()), [1, TARGET_FRAMES, FEATURE_DIM]);
@@ -121,6 +187,9 @@ export class Recognizer {
         let bi = 0;
         for (let i = 1; i < probs.length; i++) if (probs[i] > probs[bi]) bi = i;
         best = { label: this.labels[bi], conf: probs[bi], source: 'model' };
+        // 「なし」が1位なら、単語は出さない。label は NONE_LABEL のまま返すので、
+        // 使う側は label === NONE_LABEL（または none）で見分ける。
+        if (best.label === NONE_LABEL) best.none = true;
       }
 
       // プロトタイプは常に照合する。
@@ -146,22 +215,33 @@ export class Recognizer {
           scores.sort((a, b) => b.sim - a.sim);
           const top = scores[0];
           const runnerUp = scores.find(x => x.word !== top.word);
-          const margin = runnerUp ? top.sim - runnerUp.sim : 1;
+          const margin = runnerUp ? top.sim - runnerUp.sim : null;
           this.lastProto = { top, runnerUp, margin, all: scores };  // 確認用
 
-          if (top.sim >= this.protoThreshold && margin >= this.protoMargin) {
+          // いちばん近いのが「なし」のプロトタイプなら、単語としては採らない
+          const isNone = top.word === NONE_LABEL;
+          // 比べる相手がいれば margin で確かめる。いなければ高いしきい値で代わりにする
+          const passes = runnerUp
+            ? top.sim >= this.protoThreshold && margin >= this.protoMargin
+            : top.sim >= this.protoSoloThreshold;
+          // モデルが「なし」と言っているときは、さらに強い一致を求める
+          const beatsNone = !(best && best.none) || top.sim >= this.protoOverNoneThreshold;
+
+          if (!isNone && passes && beatsNone) {
+            // しきい値ちょうどで confThreshold 付近、1.0 で 0.99 になるように
             const conf = Math.min(0.99,
-              (top.sim - this.protoThreshold) / (1 - this.protoThreshold) * 0.3 + 0.70);
+              (top.sim - this.protoThreshold) / (1 - this.protoThreshold) * 0.4 + 0.60);
             // モデルが構造上その単語を出力できないなら、プロトタイプを採る。
             // 上の2条件を通っているので「何にでも当たる一致」ではない。
             const modelCannotSay = !this.labels.includes(top.word);
-            if (!best || modelCannotSay || conf > best.conf) {
+            if (!best || best.none || modelCannotSay || conf > best.conf) {
               best = { label: top.word, conf, source: 'prototype' };
             }
           }
         }
       }
 
+      if (best) best.windowMs = windowMs;
       this.lastResult = best;
       return best;
     } catch (e) {
@@ -169,6 +249,7 @@ export class Recognizer {
       return null;
     } finally {
       this.busy = false;
+      perfMark('infer', performance.now() - t0);
     }
   }
 

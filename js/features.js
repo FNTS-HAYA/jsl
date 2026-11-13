@@ -208,3 +208,153 @@ export function resample(seq, n = TARGET_FRAMES) {
   }
   return out;
 }
+
+// ===================================================
+// 判定用のフレームのため方（時間で管理する）
+//
+// これまでは「直近64フレームがたまるまで判定しない」作りだった。
+// そのせいで、手を上げてすぐ手話をすると、64フレーム（約2秒、
+// 重いPCだと3〜4秒）たまる前に手話が終わってしまい、
+// 最初の1回がほぼ認識されなかった。単語が変わるたびに
+// ためた分を消すので、毎回の1回目が同じ目にあっていた。
+//
+// しかもスタジオは「2.2秒ぶんを64に縮める」収録なのに、判定側は
+// 「64フレーム」で切っていたので、カメラが遅いPCでは時間の長さがずれていた。
+//
+// ここでは各フレームに時刻を付けてため、
+//   ・2.2秒 / 1.54秒 / 1.1秒 の「時間」で切り出して64フレームにそろえる
+//     （スタジオの収録とまったく同じ切り方。fpsに左右されない）
+//   ・まだその長さぶんたまっていなければ、足りない前の部分を
+//     「手が写っていないフレーム」で埋める（収録で手を入れる前と同じ状態）
+// とすることで、手が写って約0.6秒後から判定を始められるようにした。
+// ===================================================
+
+// 「手話ではない動き」を表すラベル（train.py の NONE_LABEL と同じ）。
+// 手を上げて止めただけ・顔をかく・手を上げ下げする、などを収録して学習させる。
+// モデルがこれを1位にしたら「何もしていない」とみなす。
+export const NONE_LABEL  = '_none';
+
+// 手がカメラに入ってきてからこれだけの間の動きは、「手話の動き」として数えない。
+// 手を下からカメラの前に持ってくるだけで画面の6%以上動くので、
+// これを数えると「手を上げて止める」だけで動きの条件を満たしてしまっていた。
+export const ENTRY_MS    = 400;
+// 手を見失っていた時間がこれ以下なら、同じ「入り」の続きとみなす
+const REENTRY_GAP_MS     = 400;
+
+export const RECORD_MS   = 2200;   // スタジオの1テイクの長さ（admin/studio.html と合わせる）
+export const MIN_SPAN_MS = 600;    // これだけたまったら判定を始める
+
+export class FrameWindow {
+  constructor(keepMs = RECORD_MS + 400) {
+    this.keepMs = keepMs;
+    this.frames = [];               // [{ v: 168次元, t: ms }]
+    this.entryT = null;             // 手がカメラに入ってきた時刻
+    this.lastHandT = null;          // 最後に手が写っていた時刻
+  }
+
+  push(vec, t = performance.now()) {
+    if (hasHand(vec)) {
+      if (this.lastHandT === null || t - this.lastHandT > REENTRY_GAP_MS) this.entryT = t;
+      this.lastHandT = t;
+    }
+    this.frames.push({ v: vec, t });
+    const from = t - this.keepMs;
+    let i = 0;
+    while (i < this.frames.length - 1 && this.frames[i].t < from) i++;
+    if (i) this.frames.splice(0, i);
+  }
+
+  clear() { this.frames = []; this.entryT = null; this.lastHandT = null; }
+  get length() { return this.frames.length; }
+  get span() {
+    const f = this.frames;
+    return f.length > 1 ? f[f.length - 1].t - f[0].t : 0;
+  }
+
+  // 判定を始めてよいか
+  ready(minMs = MIN_SPAN_MS) { return this.frames.length >= 8 && this.span >= minMs; }
+
+  // 直近 ms ミリ秒のうち、実際にたまっている割合（0〜1）
+  coverage(ms) { return ms > 0 ? Math.min(1, this.span / ms) : 0; }
+
+  // 直近 ms ミリ秒で、手首がどれだけの範囲を動いたか（画面幅=1）。両手のうち大きい方。
+  // 動いた道のりではなく「動いた範囲の広さ」なので、手を止めているときの
+  // 細かいブレは積み重ならない。
+  // 手がカメラに入ってきた直後 skipEntryMs の動き（手を持ち上げる動作）は数えない。
+  extent(ms = RECORD_MS, skipEntryMs = ENTRY_MS) {
+    const f = this.frames;
+    if (f.length < 2) return 0;
+    let from = f[f.length - 1].t - ms;
+    if (this.entryT !== null) from = Math.max(from, this.entryT + skipEntryMs);
+    let best = 0;
+    for (const off of [SLICE.RIGHT[0], SLICE.LEFT[0]]) {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const { v, t } of f) {
+        if (t < from || (!v[off] && !v[off + 1])) continue;
+        x0 = Math.min(x0, v[off]); x1 = Math.max(x1, v[off]);
+        y0 = Math.min(y0, v[off + 1]); y1 = Math.max(y1, v[off + 1]);
+      }
+      if (x1 >= x0) best = Math.max(best, Math.hypot(x1 - x0, y1 - y0));
+    }
+    return best;
+  }
+
+  // 直近 ms ミリ秒の手首の速さ（画面の幅=1 として 1秒あたり）。両手のうち速い方。
+  // 手話が終わって手が止まったかを見るのに使う。手が写っていなければ 0。
+  motion(ms = 250) {
+    const f = this.frames;
+    if (f.length < 2) return 0;
+    const last = f[f.length - 1];
+    let k = f.length - 2;
+    while (k > 0 && last.t - f[k].t < ms) k--;
+    const first = f[k], dt = (last.t - first.t) / 1000;
+    if (dt <= 0) return 0;
+    let best = 0;
+    for (const off of [SLICE.RIGHT[0], SLICE.LEFT[0]]) {
+      const a = first.v, b = last.v;
+      // その手が両方のフレームに写っているときだけ（0,0 は「手なし」）
+      if ((!a[off] && !a[off + 1]) || (!b[off] && !b[off + 1])) continue;
+      const d = Math.hypot(b[off] - a[off], b[off + 1] - a[off + 1]);
+      best = Math.max(best, d / dt);
+    }
+    return best;
+  }
+
+  // 直近 durMs ミリ秒を n フレームに切り出す（時刻で線形補間）。
+  // 足りない前の部分は「手なし」のフレームで埋める。
+  window(durMs = RECORD_MS, n = TARGET_FRAMES) {
+    const f = this.frames;
+    if (!f.length) return Array.from({ length: n }, () => new Array(FEATURE_DIM).fill(0));
+    const end = f[f.length - 1].t, start = end - durMs;
+    const pad = noHandFrame(f[0].v);
+    const out = [];
+    let j = 0;
+    for (let i = 0; i < n; i++) {
+      const t = n === 1 ? end : start + (durMs * i) / (n - 1);
+      if (t < f[0].t) { out.push(pad.slice()); continue; }
+      while (j < f.length - 2 && f[j + 1].t < t) j++;
+      const a = f[j], b = f[Math.min(j + 1, f.length - 1)];
+      const span = b.t - a.t;
+      const k = span > 0 ? Math.min(1, Math.max(0, (t - a.t) / span)) : 0;
+      const v = new Array(FEATURE_DIM);
+      for (let d = 0; d < FEATURE_DIM; d++) v[d] = a.v[d] * (1 - k) + b.v[d] * k;
+      out.push(v);
+    }
+    return out;
+  }
+}
+
+// そのフレームにどちらかの手が写っているか（手なしは手の部分がすべて0）
+function hasHand(v) {
+  for (const off of [SLICE.RIGHT[0], SLICE.LEFT[0]]) if (v[off] || v[off + 1]) return true;
+  return false;
+}
+
+// 顔の位置はそのままで、手の部分だけ0にしたフレーム
+// （buildVec({}, face) と同じ形。手を入れる前の収録フレームに当たる）
+function noHandFrame(v) {
+  const out = v.slice();
+  out.fill(0, SLICE.RIGHT[0], SLICE.LEFT[1]);
+  out.fill(0, SLICE.RDIST[0], SLICE.LDIST[1]);
+  return out;
+}

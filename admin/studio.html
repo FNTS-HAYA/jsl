@@ -363,20 +363,25 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
 
 <script type="module">
-import { buildVec, pickFacePoints, resample, FACE_KEYS, FEATURE_DIM, TARGET_FRAMES } from '../js/features.js';
+import { buildVec, pickFacePoints, resample, FACE_KEYS, FEATURE_DIM, TARGET_FRAMES, RECORD_MS, NONE_LABEL } from '../js/features.js';
 import { Recognizer } from '../js/recognizer.js';
+import { openCamera } from '../js/camera.js';
 import HANDIT_WORDS from '../words.js';
 import { initCloud, cloudUser, cloudAdmin, cloudOnline, saveCatalog, uploadTake,
          setGitHubToken, hasGitHubToken, getGitHubRepo, triggerTraining, actionsUrl } from '../js/cloud.js';
 
-const RECORD_MS  = 2200;   // 1テイクの長さ
+// 1テイクの長さ RECORD_MS は js/features.js にある（判定側の切り出しと必ずそろえるため）
 const MIN_TAKES  = 3;      // 即席登録に必要なテイク数
+// 「なし」クラス。手話ではない動きを録って、モデルに「これは何でもない」を教える。
+const NONE_CAT  = 'システム';
+const NONE_DESC = '手話じゃない動きを録る（目安30〜50テイク）。手を上げて止める／上げ下げする／顔や髪をさわる／' +
+                  'ほかの単語の最初の形で止める／手をふらふら動かす、などを毎回変えて。';
+const displayName = w => w === NONE_LABEL ? 'なし（手話じゃない動き）' : w;
 const MIN_HAND_RATIO = 0.5;// 手が写っていないと失敗扱い
 
 // ===== IndexedDB =====
@@ -438,6 +443,10 @@ async function init() {
     if (!words.find(x => x.word === w.word)) {
       words.push({ word: w.word, cat: w.cat, desc: w.desc, takes: [], fromMaster: true });
     }
+  }
+  // 「なし（手話じゃない動き）」は単語一覧（学習マップ・図鑑）には載せず、スタジオにだけ出す
+  if (!words.find(x => x.word === NONE_LABEL)) {
+    words.push({ word: NONE_LABEL, cat: NONE_CAT, desc: NONE_DESC, takes: [], fromMaster: true });
   }
   renderWords();
 
@@ -503,17 +512,15 @@ async function initDetectors() {
 async function startCam() {
   const video  = document.getElementById('cam');
   const canvas = document.getElementById('overlay');
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-  video.srcObject = stream;
-  await new Promise(r => video.onloadedmetadata = r);
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
   let fc = 0;
-  mpCam = new Camera(video, {
-    onFrame: async () => { fc++; await handsDetector.send({ image: video }); if (fc % 2 === 0) await faceMesh.send({ image: video }); },
-    width: 640, height: 480
+  mpCam = await openCamera(video, async v => {
+    fc++;
+    await handsDetector.send({ image: v });
+    if (fc % 2 === 0 && mpCam?.tracking) await faceMesh.send({ image: v });   // 顔は手が見えている間だけ
   });
-  mpCam.start();
+  canvas.width = mpCam.width; canvas.height = mpCam.height;
 }
+window.addEventListener('pagehide', () => { if (mpCam) mpCam.stop(); });
 
 function onHands(r) {
   const canvas = document.getElementById('overlay');
@@ -522,6 +529,7 @@ function onHands(r) {
   currentHands = {};
 
   const found = r.multiHandLandmarks && r.multiHandLandmarks.length;
+  mpCam?.handSeen(!!found);   // 手が無い間は処理を減らす
   if (found) {
     for (let i = 0; i < r.multiHandLandmarks.length; i++) {
       const lm = r.multiHandLandmarks[i], side = r.multiHandedness[i].label;
@@ -653,7 +661,10 @@ async function autoSync(word) {
     }
     await recognizer.registerPrototype(word.word, word.takes.map(unflatten));
 
-    if (cloudAdmin()) {
+    if (word.word === NONE_LABEL) {
+      // 単語一覧には載せない（学習マップに「_none」が出てしまうので）
+      setSync('「なし」を組み込んだ。学習が終わるとモデルに入る', 'ok');
+    } else if (cloudAdmin()) {
       await saveCatalog(upsertCatalog({ word: word.word, cat: word.cat, desc: word.desc }));
       await HANDIT_WORDS.load();
       setSync(`「${word.word}」を組み込んだ。サイトを開けばもう使える`, 'ok');
@@ -739,7 +750,7 @@ function renderWords() {
     row.innerHTML = `
       <span class="status-pip ${st}" title="${STATUS_TEXT[st]}"></span>
       <div class="word-row-main">
-        <div class="word-row-name">${esc(w.word)}</div>
+        <div class="word-row-name">${esc(displayName(w.word))}</div>
         <div class="word-row-meta">${esc(w.cat || '未分類')} · ${STATUS_TEXT[st]}</div>
       </div>
       <span class="word-row-count ${n >= MIN_TAKES ? 'ready' : ''}">${n}</span>`;
@@ -750,11 +761,11 @@ function renderWords() {
 
 function select(w) {
   selected = w;
-  document.getElementById('target-word').textContent = w.word;
+  document.getElementById('target-word').textContent = displayName(w.word);
   document.getElementById('target-note').textContent = w.desc || '説明はまだ無い';
   document.getElementById('btn-record').disabled = false;
   document.getElementById('btn-delete').disabled = false;
-  document.getElementById('btn-editcat').disabled = false;
+  document.getElementById('btn-editcat').disabled = w.word === NONE_LABEL;   // 「なし」は単語一覧に載せない
   renderTakes(); renderWords();
   const need = MIN_TAKES - w.takes.length;
   setSync(need > 0 ? `あと${need}テイクで自動的に組み込まれる` : 'この単語は組み込み済み',

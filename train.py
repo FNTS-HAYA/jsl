@@ -47,6 +47,11 @@ WORDS_DIR = os.path.join(DATA_DIR, 'words')
 CKPT      = os.path.join(DATA_DIR, 'checkpoint.pt')
 LABELS    = os.path.join(DATA_DIR, 'labels.json')
 
+# 「手話ではない動き」のラベル（js/features.js の NONE_LABEL と同じ）。
+# これが無いと、モデルは何を見ても知っている単語のどれかを答えるしかなく、
+# 手をかざして止めただけでも「こんにちは 85%」のように出てしまっていた。
+NONE_LABEL = '_none'
+
 
 # ===================================================
 # ミラー変換 —— features.js の mirrorVec と同じ計算
@@ -125,6 +130,97 @@ def augment(x, rng):
             t = (src - lo)[:, None].astype(np.float32)
             x[i] = x[i][lo] * (1 - t) + x[i][hi] * t
     return x
+
+
+# ===================================================
+# 「なし」の自動生成
+#
+# 収録した単語の中から1フレーム（その単語の途中の手の形）を取り出し、
+#   手なし → 手が下から上がってくる → その形のまま止まる（少しふらつく）
+# という「手をかざしただけ」の列を作る。手話の形をしていても、
+# 動きが無ければ単語ではない、ということをモデルに教えるため。
+# スタジオで録った「なし」(_none) があれば、それに足して使う。
+# ===================================================
+def _recompute_dist(frame):
+    """手首→顔6点の距離を、いまの座標から計算し直す（features.js の distVec と同じ）"""
+    face = frame[FACE:FACE + 18].reshape(6, 3)
+    face_ok = np.abs(face).sum(-1) > 0
+    for off, doff in ((RIGHT, RDIST), (LEFT, LDIST)):
+        w = frame[off:off + 3]
+        if not (w[0] or w[1]):
+            frame[doff:doff + 6] = 0
+            continue
+        d = np.linalg.norm(face - w, axis=-1)
+        frame[doff:doff + 6] = np.where(face_ok, d, 0)
+    return frame
+
+
+def _shift_hands(frame, dx, dy):
+    """写っている手の21点だけを平行移動する（向き・法線は変わらない）"""
+    f = frame.copy()
+    for off in (RIGHT, LEFT):
+        if not (f[off] or f[off + 1]):
+            continue
+        f[off:off + 63:3]     += dx
+        f[off + 1:off + 63:3] += dy
+    return _recompute_dist(f)
+
+
+def _no_hand(frame):
+    f = frame.copy()
+    f[RIGHT:LEFT + HAND_DIM] = 0
+    f[RDIST:LDIST + 6] = 0
+    return f
+
+
+def synth_none(data, n, rng):
+    pool = [d['samples'] for d in data if d['word'] != NONE_LABEL and len(d['samples'])]
+    if not pool:
+        return np.zeros((0, FRAMES, DIM), np.float32)
+    out = []
+    for _ in range(n):
+        s = pool[rng.integers(len(pool))]
+        smp = s[rng.integers(len(s))]
+        has = np.where((np.abs(smp[:, RIGHT:RIGHT + 2]).sum(-1) + np.abs(smp[:, LEFT:LEFT + 2]).sum(-1)) > 0)[0]
+        if len(has) == 0:
+            continue
+        pose = smp[has[rng.integers(len(has))]]
+        # 半分弱は「窓のはじめからずっと手を止めている」（2秒以上かざし続けた状態）
+        if rng.random() < 0.45:
+            lead, ramp = 0, 0
+        else:
+            lead = int(rng.integers(0, 30))       # 手が写る前
+            ramp = int(rng.integers(0, 14))       # 下から上がってくる
+        rise = rng.uniform(0.15, 0.45)
+        drift = rng.normal(0, 0.01, 2)            # 止めている間のゆっくりしたずれ
+        seq = []
+        for t in range(FRAMES):
+            if t < lead:
+                seq.append(_no_hand(pose)); continue
+            k = t - lead
+            if k < ramp:
+                dy = rise * (1 - (k + 1) / (ramp + 1))
+                seq.append(_shift_hands(pose, 0.0, dy)); continue
+            h = (k - ramp) / FRAMES
+            jit = rng.normal(0, 0.004, 2)
+            seq.append(_shift_hands(pose, drift[0] * h + jit[0], drift[1] * h + jit[1]))
+        out.append(np.stack(seq))
+    return np.asarray(out, dtype=np.float32)
+
+
+def with_none(data, rng):
+    """data に「なし」を足して返す（収録ぶん＋自動生成ぶん）"""
+    words = [d for d in data if d['word'] != NONE_LABEL]
+    rec = next((d for d in data if d['word'] == NONE_LABEL), None)
+    counts = [len(d['samples']) for d in words] or [0]
+    n_syn = int(max(80, 1.5 * np.median(counts)))
+    syn = synth_none(words, n_syn, rng)
+    rec_s = rec['samples'] if rec is not None else np.zeros((0, FRAMES, DIM), np.float32)
+    print(f'\n「なし」: 収録 {len(rec_s)} テイク + 自動生成 {len(syn)} 本')
+    if len(rec_s) == 0:
+        print('  ※ スタジオで「なし（手話じゃない動き）」を録ると、もっと強くなる')
+    samples = np.concatenate([rec_s, syn], 0)
+    return words + [{'word': NONE_LABEL, 'samples': samples, 'meta': {'cat': 'システム'}}]
 
 
 # ===================================================
@@ -273,8 +369,10 @@ def warm_start(model, labels):
 # ===================================================
 def train(epochs=120, val_ratio=0.2, batch=32, lr=3e-4, seed=0):
     data = all_words()
-    if len(data) < 2:
+    if len([d for d in data if d['word'] != NONE_LABEL]) < 2:
         sys.exit('学習するには単語が2つ以上必要です。スタジオで収録して --add してください。')
+    rng = np.random.default_rng(seed)
+    data = with_none(data, rng)
 
     # ラベルの並び順は前回を保つ（ヘッドの行を再利用するため）
     prev = []
@@ -282,8 +380,6 @@ def train(epochs=120, val_ratio=0.2, batch=32, lr=3e-4, seed=0):
         prev = json.load(open(LABELS, encoding='utf-8')).get('labels', [])
     present = [d['word'] for d in data]
     labels = [w for w in prev if w in present] + sorted(w for w in present if w not in prev)
-
-    rng = np.random.default_rng(seed)
     Xtr, Ytr, Xva, Yva = [], [], [], []
     print('\n--- データ ---')
     for d in data:

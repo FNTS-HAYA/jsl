@@ -7,17 +7,19 @@
 // ===================================================
 
 import { buildVec, pickFacePoints, FACE_KEYS, TARGET_FRAMES } from './js/features.js';
-import { Recognizer } from './js/recognizer.js';
+import { Recognizer, NONE_LABEL } from './js/recognizer.js';
 import { applyTheme } from './js/rewards.js';
+import { openCamera } from './js/camera.js';
 
-const HOLD_FRAMES   = 15;     // これだけ連続で確信できたら単語を確定
+const HOLD_FRAMES   = 4;      // これだけ連続で確信できたら単語を確定（判定は0.1秒ごと）
+const MISS_TOLERANCE = 8;     // 速く動かすと手を一瞬見失う。約0.25秒までは記録を消さない
 const FREE_COOLDOWN = 2000;   // 同じ単語が連続で並ぶのを防ぐ
 
 let recognizer = null;
 let frameBuffer = [];
 let currentHands = {}, currentFace = null;
 let handsDetector = null, faceMesh = null, mpCam = null;
-let holdCount = 0, lastWord = null, lastTime = 0;
+let holdCount = 0, lastWord = null, lastTime = 0, missCount = 0;
 
 // ===== 初期化 =====
 async function init() {
@@ -59,25 +61,21 @@ async function init() {
 async function startCam() {
   const video  = document.getElementById('video-free');
   const canvas = document.getElementById('canvas-free');
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-  video.srcObject = stream;
-  await new Promise(r => video.onloadedmetadata = r);
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-
   let fc = 0;
-  mpCam = new Camera(video, {
-    onFrame: async () => {
-      fc++;
-      await handsDetector.send({ image: video });
-      if (fc % 2 === 0) await faceMesh.send({ image: video });
-    },
-    width: 640, height: 480
+  mpCam = await openCamera(video, async v => {
+    fc++;
+    await handsDetector.send({ image: v });
+    if (fc % 2 === 0 && mpCam?.tracking) await faceMesh.send({ image: v });   // 顔は手が見えている間だけ
   });
-  mpCam.start();
+  canvas.width = mpCam.width; canvas.height = mpCam.height;
 }
+
+// ページを離れるときにカメラを確実に閉じる
+window.addEventListener('pagehide', () => { if (mpCam) mpCam.stop(); });
 
 // ===== 毎フレーム =====
 function onHandResults(results) {
+  mpCam?.handSeen(!!results.multiHandLandmarks?.length);   // 手が無い間は処理を減らす
   const canvas = document.getElementById('canvas-free');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -85,9 +83,15 @@ function onHandResults(results) {
   currentHands = {};
 
   if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
-    frameBuffer = []; holdCount = 0;
+    // 一瞬見失っただけなら、手なし（収録時と同じゼロ）として記録を続ける
+    if (++missCount > MISS_TOLERANCE) { frameBuffer = []; holdCount = 0; return; }
+    if (frameBuffer.length) {
+      frameBuffer.push(buildVec({}, currentFace));
+      if (frameBuffer.length > TARGET_FRAMES) frameBuffer.shift();
+    }
     return;
   }
+  missCount = 0;
 
   for (let i = 0; i < results.multiHandLandmarks.length; i++) {
     const lm = results.multiHandLandmarks[i], side = results.multiHandedness[i].label;
@@ -115,11 +119,12 @@ async function runInfer() {
   const res = await recognizer.classify(frameBuffer);
   if (!res) return;
   const { label, conf } = res;
-  const strong = conf >= recognizer.confThreshold;
+  const isNone = label === NONE_LABEL;   // モデルが「手話じゃない」と判断した
+  const strong = !isNone && conf >= recognizer.confThreshold;
 
   document.getElementById('free-dot').className   = 'detect-dot' + (strong ? ' active' : '');
-  document.getElementById('free-label').textContent = conf >= 0.35 ? label : '手をカメラに向けてください';
-  document.getElementById('free-conf').textContent  = conf >= 0.35 ? Math.round(conf * 100) + '%' : '';
+  document.getElementById('free-label').textContent = isNone ? '手話をしてみよう' : conf >= 0.35 ? label : '手をカメラに向けてください';
+  document.getElementById('free-conf').textContent  = !isNone && conf >= 0.35 ? Math.round(conf * 100) + '%' : '';
 
   if (!strong) { holdCount = 0; return; }
 
